@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from boaviztapi.model.components.component import ComponentCPU, ComponentRAM, ComponentSSD, ComponentHDD, \
-    ComponentPowerSupply, ComponentMotherBoard, ComponentCase
+    ComponentPowerSupply, ComponentMotherBoard, ComponentCase, ComponentGPU
 
 
 class Model(BaseModel):
@@ -78,3 +78,10 @@ class Case(BaseModel):
 
     def to_component(self):
         return ComponentCase(**self.dict())
+
+class Gpu(BaseModel):
+    # TODO: once ComponentGPU has been properly created, adapt fields accordingly
+    units: Optional[int] = None
+
+    def to_component(self):
+        return ComponentGPU()

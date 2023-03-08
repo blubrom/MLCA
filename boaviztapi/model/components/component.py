@@ -12,6 +12,8 @@ _cpu_df = pd.read_csv(os.path.join(data_dir, 'components/cpu_manufacture.csv'))
 _ram_df = pd.read_csv(os.path.join(data_dir, 'components/ram_manufacture.csv'))
 _ssd_df = pd.read_csv(os.path.join(data_dir, 'components/ssd_manufacture.csv'))
 _cpu_df['manufacture_date'] = _cpu_df['manufacture_date'].astype(str)  # Convert date column to string
+# TODO: create gpu data 
+_gpu_df = pd.read_csv(os.path.join(data_dir, 'components/gpu_manufacture.csv'))
 
 
 class Component(BaseModel):
@@ -466,6 +468,35 @@ class ComponentAssembly(Component):
 
     def impact_gwp(self) -> (float, int):
         return self._IMPACT_FACTOR_DICT['gwp']['impact'], 3
+
+    def impact_pe(self) -> (float, int):
+        return self._IMPACT_FACTOR_DICT['pe']['impact'], 3
+
+    def impact_adp(self) -> (float, int):
+        return self._IMPACT_FACTOR_DICT['adp']['impact'], 3
+
+    def smart_complete_data(self):
+        pass
+
+
+class ComponentGPU(Component):
+    # TODO: add coherent values and possibly add more subtle computations
+    TYPE = "GPU"
+
+    _IMPACT_FACTOR_DICT = {
+        "gwp": {
+            "impact": 1
+        },
+        "pe": {
+            "impact": 1
+        },
+        "adp": {
+            "impact": 1
+        }
+    }
+
+    def impact_gwp(self) -> (float, int):
+        return self._IMPACT_FACTOR_DICT['gwp']['impact'], 4
 
     def impact_pe(self) -> (float, int):
         return self._IMPACT_FACTOR_DICT['pe']['impact'], 3

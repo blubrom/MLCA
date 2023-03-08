@@ -108,3 +108,19 @@ cloud_usage_example = {
         }
     }
 }
+
+ml_setup_example = {
+  "server": {
+    "model":
+    {
+        "manufacturer": "Dell",
+        "name": "R740",
+        "type": "rack",
+        "year": 2020,
+        "archetype": "dellR740"
+    },
+  },
+  "gpu": {"units": 2},
+  "psf": 1,
+  "train_time": 1
+}

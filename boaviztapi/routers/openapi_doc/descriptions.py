@@ -110,3 +110,5 @@ cloud_aws_description = "# ✔️AWS instance impacts from instance type and usa
 
 all_default_aws_instances = "# ✔️Get all the available aws instances\n" \
                                 "Return the name of all pre-registered aws instances"
+
+ml_setup_impact_description = "TODO"

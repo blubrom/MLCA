@@ -2,9 +2,32 @@ from typing import Set, Optional
 
 from boaviztapi.model.components.component import Component
 from boaviztapi.model.devices.device import Device
+from boaviztapi.model.ml_setup import MLSetup
 import boaviztapi.utils.roundit as rd
 
 _default_impacts_code = {"gwp", "pe", "adp"}
+
+
+def bottom_up_setup(setup: MLSetup, impact_codes: Optional[Set[str]] = None) -> dict:
+  setup.smart_complete_data()
+  impacts = {
+    'gwp' : {
+      'embodied': rd.round_to_sigfig(*setup.embodied_impact_gwp()),
+      'direct': rd.round_to_sigfig(*setup.direct_impact_gwp()),
+      'unit': "kgCO2eq"
+    },
+    'pe' : {
+      'embodied': rd.round_to_sigfig(*setup.embodied_impact_pe()),
+      'direct': rd.round_to_sigfig(*setup.direct_impact_pe()),
+      'unit': "MJ"
+    },
+    'adp' : {
+      'embodied': rd.round_to_sigfig(*setup.embodied_impact_adp()),
+      'direct': rd.round_to_sigfig(*setup.direct_impact_adp()),
+      'unit': "kgSbeq"
+    }
+  }
+  return impacts
 
 
 def bottom_up_device(device: Device, impact_codes: Optional[Set[str]] = None) -> dict:

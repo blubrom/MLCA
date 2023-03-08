@@ -1,7 +1,11 @@
 from boaviztapi.model.components.component import Component
 from boaviztapi.model.devices.device import Device
+from boaviztapi.model.ml_setup import MLSetup
 import boaviztapi.utils.roundit as rd
 
+def verbose_setup(complete_setup: MLSetup, input_setup: MLSetup):
+  # TODO
+  return {}
 
 def verbose_device(complete_device: Device, input_device: Device):
     json_output = {}
