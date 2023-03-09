@@ -1,20 +1,9 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from boaviztapi.dto.component_dto import Cpu, Ram, Disk, PowerSupply, Gpu
+from boaviztapi.dto.component_dto import Gpu
 from boaviztapi.dto.server_dto import ServerDTO
 
-from boaviztapi.model.components.component import (
-    ComponentGPU,
-    ComponentCPU,
-    ComponentRAM,
-    ComponentSSD,
-    ComponentHDD,
-    ComponentPowerSupply,
-    ComponentCase,
-    Component
-)
-from boaviztapi.model.devices.device import Model, Server, CloudInstance
-from boaviztapi.model.components.usage import UsageServer, UsageCloud
+from boaviztapi.model.components.component import ComponentGPU
 from boaviztapi.model.ml_setup import MLSetup
 
 class MLSetupDTO(BaseModel):

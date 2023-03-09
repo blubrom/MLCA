@@ -5,7 +5,12 @@ import boaviztapi.utils.roundit as rd
 
 def verbose_setup(complete_setup: MLSetup, input_setup: MLSetup):
   # TODO
-  return {}
+  # pas certain qu'utiliser verbose_device soit une super idée, à creuser. 
+  # Il est possible que ça fasse n'importe quoi avec l'utilisation.
+  json_output = {}
+  json_output["server"] = verbose_device(complete_device=complete_setup.server, input_device=input_setup.server)
+  json_output["gpus"] = verbose_component(complete_component=complete_setup.gpus, input_component=input_setup.gpus)
+  return json_output
 
 def verbose_device(complete_device: Device, input_device: Device):
     json_output = {}

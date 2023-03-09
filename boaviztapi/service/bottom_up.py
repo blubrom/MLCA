@@ -8,7 +8,7 @@ import boaviztapi.utils.roundit as rd
 _default_impacts_code = {"gwp", "pe", "adp"}
 
 
-def bottom_up_setup(setup: MLSetup, impact_codes: Optional[Set[str]] = None) -> dict:
+def bottom_up_setup(setup: MLSetup, impact_codes: Optional[Set[str]] = None) -> (dict, dict):
   setup.smart_complete_data()
   impacts = {
     'gwp' : {
@@ -27,7 +27,21 @@ def bottom_up_setup(setup: MLSetup, impact_codes: Optional[Set[str]] = None) -> 
       'unit': "kgSbeq"
     }
   }
-  return impacts
+  perspective = {
+    'relative_SNBC': {
+      'value': rd.round_to_sigfig(*setup.gwp_relative_SNBC()),
+      'unit': 'Emissions of X Person per year in a sustanability scenario'
+    },
+    'relative_PB_Climate_Change': {
+      'value': rd.round_to_sigfig(*setup.gwp_relative_PB()),
+      'unit': 'person'
+    },
+    'relative_PB_ADP':{
+      'value': rd.round_to_sigfig(*setup.adp_relative_PB()),
+      'unit': 'person'
+    }
+  }
+  return impacts, perspective
 
 
 def bottom_up_device(device: Device, impact_codes: Optional[Set[str]] = None) -> dict:

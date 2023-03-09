@@ -22,11 +22,12 @@ async def ml_setup_impact_by_config(ml_setup_dto: MLSetupDTO = Body(None, exampl
     # do a deep copy because bottom_up_setup will auto-complete the missing
     # elements ad we need both the incomplete and the completed version for the verbose option
     completed_setup = copy.deepcopy(setup)
-    impacts = bottom_up_setup(setup=completed_setup)
-    result = impacts
+    impacts, perspective = bottom_up_setup(setup=completed_setup)
+    result = {"impacts": impacts, "perspective": perspective}
 
     if verbose:
         result = {"impacts": impacts,
+                  "perspective": perspective,
                   "verbose": verbose_setup(complete_setup=completed_setup, input_setup=setup)}
 
     return result

@@ -485,7 +485,7 @@ class ComponentGPU(Component):
 
     _IMPACT_FACTOR_DICT = {
         "gwp": {
-            "impact": 1
+            "impact": 150
         },
         "pe": {
             "impact": 1
