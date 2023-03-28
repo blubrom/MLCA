@@ -144,3 +144,23 @@ class UsageCloud(UsageServer):
 
     def get_duration_hours(self) -> float:
         return super().get_duration_hours()
+
+
+class UsageComponent(Usage):
+    def impact_gwp(self) -> (float, int):
+        return super().impact_gwp()
+
+    def impact_pe(self) -> (float, int):
+        return super().impact_pe()
+
+    def impact_adp(self) -> (float, int):
+        return super().impact_adp()
+
+    def smart_complete_data(self):
+        super().smart_complete_data()
+        
+    def get_hours_electrical_consumption(self):
+        return super().get_hours_electrical_consumption()
+      
+    def get_duration_hours(self):
+        return super().get_duration_hours()

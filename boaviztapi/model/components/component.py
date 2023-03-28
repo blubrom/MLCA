@@ -11,9 +11,19 @@ from boaviztapi.model.components import data_dir
 _cpu_df = pd.read_csv(os.path.join(data_dir, 'components/cpu_manufacture.csv'))
 _ram_df = pd.read_csv(os.path.join(data_dir, 'components/ram_manufacture.csv'))
 _ssd_df = pd.read_csv(os.path.join(data_dir, 'components/ssd_manufacture.csv'))
-_cpu_df['manufacture_date'] = _cpu_df['manufacture_date'].astype(str)  # Convert date column to string
-# TODO: create gpu data 
+_cpu_df['manufacture_date'] = _cpu_df['manufacture_date'].astype(
+    str)  # Convert date column to string
+# TODO: create gpu data
 _gpu_df = pd.read_csv(os.path.join(data_dir, 'components/gpu_manufacture.csv'))
+
+# Data taken from the green algorithms tool, available at https://github.com/GreenAlgorithms/green-algorithms-tool
+# under https://creativecommons.org/licenses/by/4.0/ licence.
+# Lannelongue, L., Grealey, J., Inouye, M., Green Algorithms: Quantifying the Carbon Footprint of Computation.
+# Adv. Sci. 2021, 8, 2100707. https://doi.org/10.1002/advs.202100707
+_gpu_tdp_df = pd.read_csv(os.path.join(
+    data_dir, 'components/GPU_TDP_Green_Algorithms.csv'), skiprows=1)
+_cpu_tdp_df = pd.read_csv(os.path.join(
+    data_dir, 'components/CPU_TDP_Green_Algorithms.csv'), skiprows=1)
 
 
 class Component(BaseModel):
@@ -36,12 +46,17 @@ class Component(BaseModel):
     def smart_complete_data(self):
         pass
 
+    @abstractmethod
+    def power_draw(self) -> (float, int):
+        pass
+
     def __iter__(self):
         for attr, value in self.__dict__.items():
             yield attr, value
 
     def __hash__(self):
-        object_fingerprint = bytes(((type(self),) + tuple(self.__dict__.values())).__str__(), encoding='utf8')
+        object_fingerprint = bytes(
+            ((type(self),) + tuple(self.__dict__.values())).__str__(), encoding='utf8')
         return hashlib.sha256(object_fingerprint).hexdigest()
 
     def __init__(self, *args, **kwargs):
@@ -71,6 +86,9 @@ class ComponentCPU(Component):
     _DEFAULT_CPU_DIE_SIZE_PER_CORE = 0.245
     _DEFAULT_CPU_CORE_UNITS = 24
 
+   # Default value (Any) in the CPU_TDP_Green_Algorithms data
+    _DEFAULT_TDP_PER_CORE = 12
+
     core_units: Optional[int] = None
     die_size: Optional[float] = None
     die_size_per_core: Optional[float] = None
@@ -79,29 +97,48 @@ class ComponentCPU(Component):
     manufacture_date: Optional[str] = None
     model: Optional[str] = None
     family: Optional[str] = None
+    tdp: Optional[int] = None
 
     def impact_gwp(self) -> (float, int):
         core_impact = self._IMPACT_FACTOR_DICT['constant_core_impact']
         cpu_die_impact = self._IMPACT_FACTOR_DICT['gwp']['die_impact']
         cpu_impact = self._IMPACT_FACTOR_DICT['gwp']['impact']
-        significant_figures=rd.min_significant_figures(self.die_size_per_core,core_impact,cpu_die_impact,cpu_impact)
+        significant_figures = rd.min_significant_figures(
+            self.die_size_per_core, core_impact, cpu_die_impact, cpu_impact)
         return (self.core_units * self.die_size_per_core + core_impact) * cpu_die_impact + cpu_impact, significant_figures
 
     def impact_pe(self) -> (float, int):
         core_impact = self._IMPACT_FACTOR_DICT['constant_core_impact']
         cpu_die_impact = self._IMPACT_FACTOR_DICT['pe']['die_impact']
         cpu_impact = self._IMPACT_FACTOR_DICT['pe']['impact']
-        significant_figures=rd.min_significant_figures(self.die_size_per_core,core_impact,cpu_die_impact,cpu_impact)
-        return (self.core_units * self.die_size_per_core + core_impact) * cpu_die_impact + cpu_impact,significant_figures
+        significant_figures = rd.min_significant_figures(
+            self.die_size_per_core, core_impact, cpu_die_impact, cpu_impact)
+        return (self.core_units * self.die_size_per_core + core_impact) * cpu_die_impact + cpu_impact, significant_figures
 
     def impact_adp(self) -> (float, int):
         core_impact = self._IMPACT_FACTOR_DICT['constant_core_impact']
         cpu_die_impact = self._IMPACT_FACTOR_DICT['adp']['die_impact']
         cpu_impact = self._IMPACT_FACTOR_DICT['adp']['impact']
-        significant_figures=rd.min_significant_figures(self.die_size_per_core,core_impact,cpu_die_impact,cpu_impact)
+        significant_figures = rd.min_significant_figures(
+            self.die_size_per_core, core_impact, cpu_die_impact, cpu_impact)
         return (self.core_units * self.die_size_per_core + core_impact) * cpu_die_impact + cpu_impact, significant_figures
 
+    def power_draw(self) -> (float, int):
+        return self.tdp, 3
+
     def smart_complete_data(self):
+        # TODO: refactor to include searching for the TDP and also getting the info
+        # (die_size_per_core and core_units)from the CPU model name.
+        if not self.tdp and self.model:
+            sub = _cpu_tdp_df[_cpu_tdp_df['model'] == self.model]
+            if len(sub) == 1:
+                self.tdp = int(sub['TDP'])
+                return
+            else:
+                print(
+                    "nom de CPU inconnu, utilisation de la valeur par défaut pour le TDP")
+        self.tdp = self._DEFAULT_TDP_PER_CORE * self._DEFAULT_CPU_CORE_UNITS
+
         if self.die_size_per_core and self.core_units:
             return
 
@@ -128,7 +165,8 @@ class ComponentCPU(Component):
                 self.core_units = int(sub['core_units'])
 
             else:
-                sub['_scope3'] = sub[['core_units', 'die_size_per_core']].apply(lambda x: x[0] * x[1], axis=1)
+                sub['_scope3'] = sub[['core_units', 'die_size_per_core']].apply(
+                    lambda x: x[0] * x[1], axis=1)
                 sub = sub.sort_values(by='_scope3', ascending=False)
                 row = sub.iloc[0]
                 die_size_per_core = float(row['die_size_per_core'])
@@ -158,6 +196,12 @@ class ComponentRAM(Component):
     _DEFAULT_RAM_CAPACITY = 32
     _DEFAULT_RAM_DENSITY = 0.625
 
+    # value taken from
+    # Lannelongue, L., Grealey, J., Inouye, M., Green Algorithms: Quantifying the Carbon Footprint of Computation.
+    # Adv. Sci. 2021, 8, 2100707. https://doi.org/10.1002/advs.202100707
+    # citing reference 26.
+    _POWER_DRAW_PER_GB = 0.3725
+
     capacity: Optional[int] = None
     density: Optional[float] = None
     process: Optional[float] = None
@@ -169,20 +213,26 @@ class ComponentRAM(Component):
     def impact_gwp(self) -> (float, int):
         ram_die_impact = self._IMPACT_FACTOR_DICT['gwp']['die_impact']
         ram_impact = self._IMPACT_FACTOR_DICT['gwp']['impact']
-        significant_figure = rd.min_significant_figures(self.density, ram_die_impact, ram_impact)
+        significant_figure = rd.min_significant_figures(
+            self.density, ram_die_impact, ram_impact)
         return ((self.capacity / self.density) * ram_die_impact + ram_impact, significant_figure)
 
     def impact_pe(self) -> (float, int):
         ram_die_impact = self._IMPACT_FACTOR_DICT['pe']['die_impact']
         ram_impact = self._IMPACT_FACTOR_DICT['pe']['impact']
-        significant_figure = rd.min_significant_figures(self.density, ram_die_impact, ram_impact)
+        significant_figure = rd.min_significant_figures(
+            self.density, ram_die_impact, ram_impact)
         return (self.capacity / self.density) * ram_die_impact + ram_impact, significant_figure
 
     def impact_adp(self) -> (float, int):
         ram_die_impact = self._IMPACT_FACTOR_DICT['adp']['die_impact']
         ram_impact = self._IMPACT_FACTOR_DICT['adp']['impact']
-        significant_figure = rd.min_significant_figures(self.density, ram_die_impact, ram_impact)
+        significant_figure = rd.min_significant_figures(
+            self.density, ram_die_impact, ram_impact)
         return ((self.capacity / self.density) * ram_die_impact + ram_impact, significant_figure)
+
+    def power_draw(self) -> (float, int):
+        return self._POWER_DRAW_PER_GB * self.capacity, 3
 
     def smart_complete_data(self):
         if self.capacity and self.density:
@@ -243,6 +293,10 @@ class ComponentHDD(Component):
     def impact_adp(self) -> (float, int):
         return self._IMPACT_FACTOR_DICT['adp']['impact'], 3
 
+    def power_draw(self) -> (float, int):
+        # TODO: explore some ressources about the consumption of storage
+        return 0, 3
+
     def smart_complete_data(self):
         pass
 
@@ -277,20 +331,27 @@ class ComponentSSD(Component):
     def impact_gwp(self) -> (float, int):
         ssd_die_impact = self._IMPACT_FACTOR_DICT['gwp']['die_impact']
         ssd_impact = self._IMPACT_FACTOR_DICT['gwp']['impact']
-        significant_figure = rd.min_significant_figures(self.density, ssd_impact, ssd_die_impact)
+        significant_figure = rd.min_significant_figures(
+            self.density, ssd_impact, ssd_die_impact)
         return (self.capacity / self.density) * ssd_die_impact + ssd_impact, significant_figure
 
     def impact_pe(self) -> (float, int):
         ssd_die_impact = self._IMPACT_FACTOR_DICT['pe']['die_impact']
         ssd_impact = self._IMPACT_FACTOR_DICT['pe']['impact']
-        significant_figure = rd.min_significant_figures(self.density, ssd_impact, ssd_die_impact)
+        significant_figure = rd.min_significant_figures(
+            self.density, ssd_impact, ssd_die_impact)
         return (self.capacity / self.density) * ssd_die_impact + ssd_impact, significant_figure
 
     def impact_adp(self) -> (float, int):
         ssd_die_impact = self._IMPACT_FACTOR_DICT['adp']['die_impact']
         ssd_impact = self._IMPACT_FACTOR_DICT['adp']['impact']
-        significant_figure = rd.min_significant_figures(self.density, ssd_impact, ssd_die_impact)
+        significant_figure = rd.min_significant_figures(
+            self.density, ssd_impact, ssd_die_impact)
         return (self.capacity / self.density) * ssd_die_impact + ssd_impact, significant_figure
+
+    def power_draw(self) -> (float, int):
+        # TODO: explore some ressources about the consumption of storage
+        return 0, 3
 
     def smart_complete_data(self):
         if self.capacity and self.density:
@@ -380,6 +441,12 @@ class ComponentMotherBoard(Component):
     def impact_adp(self) -> (float, int):
         return self._IMPACT_FACTOR_DICT['adp']['impact'], 3
 
+    def power_draw(self) -> (float, int):
+        # Lannelongue, L., Grealey, J., Inouye, M., Green Algorithms: Quantifying the Carbon Footprint of Computation.
+        # Adv. Sci. 2021, 8, 2100707. https://doi.org/10.1002/advs.202100707
+        # Says that the power draw of the Motherboard is negligible
+        return 0, 3
+
     def smart_complete_data(self):
         pass
 
@@ -421,7 +488,8 @@ class ComponentCase(Component):
         if self.case_type == "blade":
             impact_blade_16_slots = self._IMPACT_FACTOR_DICT['blade']['gwp']['impact_blade_16_slots']
             impact_blade_server = self._IMPACT_FACTOR_DICT['blade']['gwp']['impact_blade_server']
-            sigfig = rd.min_significant_figures(impact_blade_16_slots, impact_blade_server)
+            sigfig = rd.min_significant_figures(
+                impact_blade_16_slots, impact_blade_server)
             return (impact_blade_16_slots / 16) + impact_blade_server, sigfig
         else:
             return self._IMPACT_FACTOR_DICT['rack']['gwp']['impact'], 5
@@ -430,7 +498,8 @@ class ComponentCase(Component):
         if self.case_type == "blade":
             impact_blade_16_slots = self._IMPACT_FACTOR_DICT['blade']['pe']['impact_blade_16_slots']
             impact_blade_server = self._IMPACT_FACTOR_DICT['blade']['pe']['impact_blade_server']
-            sigfig = rd.min_significant_figures(impact_blade_16_slots, impact_blade_server)
+            sigfig = rd.min_significant_figures(
+                impact_blade_16_slots, impact_blade_server)
             return (impact_blade_16_slots / 16) + impact_blade_server, sigfig
         else:
             return self._IMPACT_FACTOR_DICT['rack']['pe']['impact'], 4
@@ -439,10 +508,17 @@ class ComponentCase(Component):
         if self.case_type == "blade":
             impact_blade_16_slots = self._IMPACT_FACTOR_DICT['blade']['adp']['impact_blade_16_slots']
             impact_blade_server = self._IMPACT_FACTOR_DICT['blade']['adp']['impact_blade_server']
-            sigfig = rd.min_significant_figures(impact_blade_16_slots, impact_blade_server)
+            sigfig = rd.min_significant_figures(
+                impact_blade_16_slots, impact_blade_server)
             return (impact_blade_16_slots / 16) + impact_blade_server, sigfig
         else:
             return self._IMPACT_FACTOR_DICT['rack']['adp']['impact'], 3
+
+    def power_draw(self) -> (float, int):
+        # Does not consume anything
+        # One would maybe want to take into account fans in this place
+        # if they were to have a non negligible consumption
+        return 0, 3
 
     def smart_complete_data(self):
         if self.case_type is None:
@@ -475,16 +551,24 @@ class ComponentAssembly(Component):
     def impact_adp(self) -> (float, int):
         return self._IMPACT_FACTOR_DICT['adp']['impact'], 3
 
+    def power_draw(self) -> (float, int):
+        # by definition does not take place during usage so
+        # a value of 0 is chosen
+        return 0, 3
+
     def smart_complete_data(self):
         pass
 
 
 class ComponentGPU(Component):
-    # TODO: add coherent values and possibly add more subtle computations
     TYPE = "GPU"
 
+    # TODO: add coherent values and possibly add more subtle computations
     _IMPACT_FACTOR_DICT = {
         "gwp": {
+            # choice coming from the value chosen in
+            # Luccioni et al. (2022) "Estimating the carbon footprint of Bloom, a 176B parameter Language Model"
+            # https://doi.org/10.48550/ARXIV.2211.02001
             "impact": 150
         },
         "pe": {
@@ -495,8 +579,14 @@ class ComponentGPU(Component):
         }
     }
 
+    # Default value (Any) in the GPU_TDP_Green_Algorithms data
+    _DEFAULT_TDP = 200
+
+    tdp: Optional[int] = None
+    model: Optional[str] = None
+
     def impact_gwp(self) -> (float, int):
-        return self._IMPACT_FACTOR_DICT['gwp']['impact'], 4
+        return self._IMPACT_FACTOR_DICT['gwp']['impact'], 3
 
     def impact_pe(self) -> (float, int):
         return self._IMPACT_FACTOR_DICT['pe']['impact'], 3
@@ -504,5 +594,22 @@ class ComponentGPU(Component):
     def impact_adp(self) -> (float, int):
         return self._IMPACT_FACTOR_DICT['adp']['impact'], 3
 
+    def power_draw(self) -> (float, int):
+        return self.tdp, 3
+
     def smart_complete_data(self):
-        pass
+        if not self.tdp and self.model:
+            sub = _gpu_tdp_df[_gpu_tdp_df['model'] == self.model]
+            if len(sub) == 1:
+                self.tdp = int(sub['TDP'])
+                return
+            else:
+                # TODO: savoir renvoyer un log disant que le nom est inconnu au bataillon
+                # pour cela, regarder la doc de fastapi, au moins pour le test
+                # à terme, ce ne sera pas forcément nécéssaire vu qu'on peut faire l'hypothèse que les données arriveront depuis
+                # un formulaire. Cette hypothèse n'est cependant pas forcément réaliste si on souhaite pouvoir utiliser cette api
+                # en mode "mesure"
+                # Si je comprends la doc, faire un print pourrait donner un résultat : essayons donc.
+                print(
+                    "nom de GPU inconnu, utilisation de la valeur par défaut pour le TDP")
+        self.tdp = self._DEFAULT_TDP

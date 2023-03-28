@@ -60,6 +60,7 @@ class Cpu(BaseModel):
     manufacture_date: Optional[str] = None
     model: Optional[str] = None
     family: Optional[str] = None
+    tdp: Optional[int] = None
 
     def to_component(self):
         return ComponentCPU(**self.dict())
@@ -79,9 +80,11 @@ class Case(BaseModel):
     def to_component(self):
         return ComponentCase(**self.dict())
 
+
 class Gpu(BaseModel):
-    # TODO: once ComponentGPU has been properly created, adapt fields accordingly
     units: Optional[int] = None
+    tdp: Optional[int] = None
+    model: Optional[str] = None
 
     def to_component(self):
-        return ComponentGPU()
+        return ComponentGPU(**self.dict())
