@@ -1,4 +1,4 @@
-index,in Watt,,,,,,,,,
+index,in Watt,,,,,,,in mm²,,
 model,TDP,core_units,TDP_per_core, manufacturer,family,manufacture_date,process,die_size,die_size_per_core,source
 A8-7600,65,4,11.3,AMD,Kaveri,2014,28,245,,https://www.techpowerup.com/cpu-specs/
 A8-7680,45,4,11.3,AMD,Carrizo,2018,28,250,,https://www.techpowerup.com/cpu-specs/

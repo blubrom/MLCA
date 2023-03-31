@@ -1,0 +1,33 @@
+#+begin_src R :results output :session *R* :exports both
+df = read.csv('boaviztapi/data/components/gpu_infos.csv', header=T, skip=1,sep=',')
+summary(df)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+
+    model                TDP        n_cores           process    
+ Length:21          Min.   : 30.0   Mode:logical   Min.   : 7.0  
+ Class :character   1st Qu.:185.0   NA's:21        1st Qu.:12.0  
+ Mode  :character   Median :250.0                  Median :12.0  
+                    Mean   :220.7                  Mean   :13.9  
+                    3rd Qu.:250.0                  3rd Qu.:16.0  
+                    Max.   :400.0                  Max.   :28.0  
+                                                   NA's   :1     
+ architecture       manufacture_date    die_size         memory    
+ Length:21          Min.   :2014     Min.   :2.320   Min.   : 8.0  
+ Class :character   1st Qu.:2016     1st Qu.:4.407   1st Qu.:11.0  
+ Mode  :character   Median :2018     Median :5.810   Median :12.0  
+                    Mean   :2017     Mean   :5.831   Mean   :23.3  
+                    3rd Qu.:2018     3rd Qu.:8.150   3rd Qu.:32.0  
+                    Max.   :2021     Max.   :8.260   Max.   :80.0  
+                    NA's   :1        NA's   :1       NA's   :1     
+    source         
+ Length:21         
+ Class :character  
+ Mode  :character
+
+[1] 220.7143
+
+[1] NA
+#+end_example

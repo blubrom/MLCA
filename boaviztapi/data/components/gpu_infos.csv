@@ -1,0 +1,23 @@
+index,in Watt,TO BE CHECKED,nm,,, in cm², in GB, 
+model,TDP,n_cores,process,architecture,manufacture_date,die_size,memory,source
+NVIDIA Jetson AGX Xavier 16 GB,30,,12,Volta,2018,3.50,16,https://www.techpowerup.com/gpu-specs/jetson-agx-xavier-16-gb.c3232
+NVIDIA Jetson AGX Xavier 32 GB,30,,12,Volta,2018,3.50,32,https://www.techpowerup.com/gpu-specs/jetson-agx-xavier-32-gb.c4088
+NVIDIA Tesla T4,70,,12,Turing,2018,5.45,16,https://www.techpowerup.com/gpu-specs/tesla-t4.c3316
+AMD Radeon RX 580,185,,14,GCN 4.0,2017,2.32,8,techpowerup.com/gpu-specs/radeon-rx-580.c2938
+Any,220.7,,,,,5.83,23.3
+NVIDIA GeForce RTX 2080,215,,12,Turing,2018,5.45,8,techpowerup.com/gpu-specs/geforce-rtx-2080.c3224
+NVIDIA GeForce RTX 2080 Ti,250,,12,Turing,2018,7.54,11,techpowerup.com/gpu-specs/geforce-rtx-2080-ti.c3305
+NVIDIA GeForce GTX 1080,180,,16,Pascal,2016,3.14,8,techpowerup.com/gpu-specs/geforce-gtx-1080.c2839
+NVIDIA GeForce GTX 1080 Ti,250,,16,Pascal,2017,4.71,11,https://www.techpowerup.com/gpu-specs/geforce-gtx-1080-ti.c2877
+NVIDIA Titan V,250,,12,Volta,2017,8.15,12,techpowerup.com/gpu-specs/titan-v.c3051
+NVIDIA GTX TITAN X,250,,28,Maxwell 2.0,2015,6.01,12,techpowerup.com/gpu-specs/geforce-gtx-titan-x.c2632
+NVIDIA TITAN X Pascal,250,,16,Pascal,2016,4.71,12,https://www.techpowerup.com/gpu-specs/titan-x-pascal.c2863
+NVIDIA Tesla P100 PCIe 12 GB,250,,16,Pascal,2016,6.10,12,https://www.techpowerup.com/gpu-specs/tesla-p100-pcie-12-gb.c2915
+NVIDIA Tesla P100 PCIe 16 GB,250,,16,Pascal,2016,6.10,16,https://www.techpowerup.com/gpu-specs/tesla-p100-pcie-16-gb.c2888
+NVIDIA A100 PCIe 40 GB,250,,7,Ampere,2020,8.26,40,https://www.techpowerup.com/gpu-specs/a100-pcie-40-gb.c3623
+NVIDIA A100 PCIe 80 GB,300,,7,Ampere,2021,8.26,80,https://www.techpowerup.com/gpu-specs/a100-pcie-80-gb.c3821
+NVIDIA A100 SXM4 40 GB,400,,7,Ampere,2020,8.26,40,https://www.techpowerup.com/gpu-specs/a100-sxm4-40-gb.c3506
+NVIDIA A100 SXM4 80 GB,400,,7,Ampere,2020,8.26,80,https://www.techpowerup.com/gpu-specs/a100-sxm4-40-gb.c3506
+NVIDIA Tesla P4,75,,16,Pascal,2016,3.14,8,https://www.techpowerup.com/gpu-specs/tesla-p4.c2879
+NVIDIA Tesla K80,300,,28,Kepler 2.0,2014,5.61,12,https://www.techpowerup.com/gpu-specs/tesla-k80.c2616
+NVIDIA Tesla V100 PCIe 32 GB, 250,,12,Volta,2018,8.15,32,https://www.techpowerup.com/gpu-specs/tesla-v100-pcie-32-gb.c3184

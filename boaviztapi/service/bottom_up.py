@@ -33,12 +33,12 @@ def bottom_up_setup(setup: MLSetup, impact_codes: Optional[Set[str]] = None) -> 
             'unit': "kgSbeq"
         }
     }
-    gwp_relative_SNCB = setup.gwp_relative_SNBC()
+    gwp_relative_SNBC = setup.gwp_relative_SNBC()
     gwp_relative_PB = setup.gwp_relative_PB()
     adp_relative_PB = setup.adp_relative_PB()
     perspective = {
         'relative_SNBC': {
-            'value': rd.round_to_sigfig(setup.psf * gwp_relative_SNCB[0], gwp_relative_SNCB[1]),
+            'value': rd.round_to_sigfig(setup.psf * gwp_relative_SNBC[0], gwp_relative_SNBC[1]),
             'unit': 'Emissions of X Person per year in a sustanability scenario'
         },
         'relative_PB_Climate_Change': {

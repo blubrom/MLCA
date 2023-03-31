@@ -8,22 +8,20 @@ from pydantic import BaseModel
 
 from boaviztapi.model.components import data_dir
 
-_cpu_df = pd.read_csv(os.path.join(data_dir, 'components/cpu_manufacture.csv'))
+_cpu_df = pd.read_csv(os.path.join(data_dir, 'components/cpu_infos.csv'))
 _ram_df = pd.read_csv(os.path.join(data_dir, 'components/ram_manufacture.csv'))
 _ssd_df = pd.read_csv(os.path.join(data_dir, 'components/ssd_manufacture.csv'))
 _cpu_df['manufacture_date'] = _cpu_df['manufacture_date'].astype(
     str)  # Convert date column to string
-# TODO: create gpu data
-_gpu_df = pd.read_csv(os.path.join(data_dir, 'components/gpu_manufacture.csv'))
+_gpu_df = pd.read_csv(os.path.join(
+    data_dir, 'components/gpu_infos.csv'), skiprows=1)
+_gpu_df['manufacture_date'] = _cpu_df['manufacture_date'].astype(
+    str)  # Convert date column to string
 
-# Data taken from the green algorithms tool, available at https://github.com/GreenAlgorithms/green-algorithms-tool
-# under https://creativecommons.org/licenses/by/4.0/ licence.
-# Lannelongue, L., Grealey, J., Inouye, M., Green Algorithms: Quantifying the Carbon Footprint of Computation.
-# Adv. Sci. 2021, 8, 2100707. https://doi.org/10.1002/advs.202100707
-_gpu_tdp_df = pd.read_csv(os.path.join(
-    data_dir, 'components/GPU_TDP_Green_Algorithms.csv'), skiprows=1)
-_cpu_tdp_df = pd.read_csv(os.path.join(
-    data_dir, 'components/CPU_TDP_Green_Algorithms.csv'), skiprows=1)
+# _gpu_tdp_df = pd.read_csv(os.path.join(
+#     data_dir, 'components/GPU_TDP_Green_Algorithms.csv'), skiprows=1)
+# _cpu_tdp_df = pd.read_csv(os.path.join(
+#     data_dir, 'components/CPU_TDP_Green_Algorithms.csv'), skiprows=1)
 
 
 class Component(BaseModel):
@@ -67,9 +65,15 @@ class Component(BaseModel):
 class ComponentCPU(Component):
     TYPE = "CPU"
 
+    # figures come from: Gröger, J., Liu, R., Stobbe, L., Druschke, J., and Richter,N. (2021).
+    # Green Cloud Computing: lebenszyklusbasierte Datenerhebung zuUmweltwirkungen des Cloud Computing:
+    # Abschlussbericht.   Umweltbundesamt, Appendix B.2.1 and section 3.2.3.3
+    # /!\ factor units is per cm² not per mm²
     _IMPACT_FACTOR_DICT = {
         "gwp": {
+            # impact of producing 1cm² of die
             "die_impact": 1.97,
+            # base impact (accounting for gold for the socket or the heatsink for instance)
             "impact": 9.14
         },
         "pe": {
@@ -80,10 +84,14 @@ class ComponentCPU(Component):
             "die_impact": 5.80E-07,
             "impact": 2.04E-02
         },
+        # base die surface, this is obtained by a linear regression on
+        # the die size as a function of the number of cores.
+        # On their data, they obtained a CPU die area equal to 28.58 * number of cores + 49.157 (in mm²)
         "constant_core_impact": 0.491
     }
 
     _DEFAULT_CPU_DIE_SIZE_PER_CORE = 0.245
+
     _DEFAULT_CPU_CORE_UNITS = 24
 
    # Default value (Any) in the CPU_TDP_Green_Algorithms data
@@ -154,7 +162,7 @@ class ComponentCPU(Component):
                 sub = sub[sub['family'] == self.family]
 
             if self.core_units:
-                sub = sub[sub['process'] == self.core_units]
+                sub = sub[sub['core_units'] == self.core_units]
 
             if len(sub) == 0 or len(sub) == len(_cpu_df):
                 self.die_size_per_core = self._DEFAULT_CPU_DIE_SIZE_PER_CORE
@@ -412,6 +420,9 @@ class ComponentPowerSupply(Component):
         power_supply_impact = self._IMPACT_FACTOR_DICT['adp']['impact']
         return power_supply_weight * power_supply_impact, 3
 
+    def power_draw(self) -> (float, int):
+        return 0, 3
+
     def smart_complete_data(self):
         self.unit_weight = self.unit_weight \
             if self.unit_weight is not None else \
@@ -563,53 +574,104 @@ class ComponentAssembly(Component):
 class ComponentGPU(Component):
     TYPE = "GPU"
 
-    # TODO: add coherent values and possibly add more subtle computations
+    # impact factors chosen are the same as for CPUs for now
+    # die impacts should not change but base impacts should,
+    # once we gather specific data from at leat a GPU
+    # /!\ factor units is per cm² not per mm²
+    # for more details on what each quantity stands for, look at CPU._IMPACT_FACTOR_DICT
     _IMPACT_FACTOR_DICT = {
         "gwp": {
-            # choice coming from the value chosen in
-            # Luccioni et al. (2022) "Estimating the carbon footprint of Bloom, a 176B parameter Language Model"
-            # https://doi.org/10.48550/ARXIV.2211.02001
-            "impact": 150
+            "die_impact": 1.97,
+            "impact": 9.14
         },
         "pe": {
-            "impact": 1
+            "die_impact": 26.50,
+            "impact": 156.00
         },
         "adp": {
-            "impact": 1
-        }
+            "die_impact": 5.80E-07,
+            "impact": 2.04E-02
+        },
     }
 
-    # Default value (Any) in the GPU_TDP_Green_Algorithms data
-    _DEFAULT_TDP = 200
+    # mean of the values in the database.
+    _DEFAULT_GPU_TDP = 220
+    # in cm²
+    _DEFAULT_GPU_DIE_SIZE = 5.83
+    # in GB
+    _DEFAULT_GPU_MEMORY = 23
 
-    tdp: Optional[int] = None
+    die_size: Optional[float] = None
+    process: Optional[float] = None
+    manufacturer: Optional[str] = None
+    manufacture_date: Optional[str] = None
     model: Optional[str] = None
+    architecture: Optional[str] = None
+    tdp: Optional[int] = None
+    memory_size: Optional[int] = None
+    memory: Optional[ComponentRAM] = None
 
     def impact_gwp(self) -> (float, int):
-        return self._IMPACT_FACTOR_DICT['gwp']['impact'], 3
+        gpu_die_impact = self._IMPACT_FACTOR_DICT['gwp']['die_impact']
+        gpu_impact = self._IMPACT_FACTOR_DICT['gwp']['impact']
+        significant_figures = rd.min_significant_figures(
+            self.die_size, gpu_die_impact, gpu_impact)
+        return self.die_size * gpu_die_impact + gpu_impact, significant_figures
 
     def impact_pe(self) -> (float, int):
-        return self._IMPACT_FACTOR_DICT['pe']['impact'], 3
+        gpu_die_impact = self._IMPACT_FACTOR_DICT['pe']['die_impact']
+        gpu_impact = self._IMPACT_FACTOR_DICT['pe']['impact']
+        significant_figures = rd.min_significant_figures(
+            self.die_size, gpu_die_impact, gpu_impact)
+        return self.die_size * gpu_die_impact + gpu_impact, significant_figures
 
     def impact_adp(self) -> (float, int):
-        return self._IMPACT_FACTOR_DICT['adp']['impact'], 3
+        gpu_die_impact = self._IMPACT_FACTOR_DICT['adp']['die_impact']
+        gpu_impact = self._IMPACT_FACTOR_DICT['adp']['impact']
+        significant_figures = rd.min_significant_figures(
+            self.die_size, gpu_die_impact, gpu_impact)
+        return self.die_size * gpu_die_impact + gpu_impact, significant_figures
 
     def power_draw(self) -> (float, int):
         return self.tdp, 3
 
     def smart_complete_data(self):
-        if not self.tdp and self.model:
-            sub = _gpu_tdp_df[_gpu_tdp_df['model'] == self.model]
-            if len(sub) == 1:
-                self.tdp = int(sub['TDP'])
-                return
-            else:
-                # TODO: savoir renvoyer un log disant que le nom est inconnu au bataillon
+        # first complete infos about the TDP, the die size and the memory size
+        if not (self.tdp and self.die_size and self.memory_size):
+            sub = _gpu_df
+            if self.model:
+                sub = sub[sub['model'] == self.model]
+            if self.tdp:
+                sub = sub[sub['TDP'] == self.tdp]
+            if self.die_size:
+                sub = sub[sub['die_size'] == self.die_size]
+            if self.architecture:
+                sub = sub[sub['architecture'] == self.architecture]
+            if self.process:
+                sub = sub[sub['process'] == self.process]
+            if self.manufacture_date:
+                sub = sub[sub['manufacture_date'] == self.manufacture_date]
+
+            if len(sub) == 0 or len(sub) == len(_cpu_df):
+                # TODO: savoir renvoyer un log disant que le nom est inconnu
                 # pour cela, regarder la doc de fastapi, au moins pour le test
                 # à terme, ce ne sera pas forcément nécéssaire vu qu'on peut faire l'hypothèse que les données arriveront depuis
                 # un formulaire. Cette hypothèse n'est cependant pas forcément réaliste si on souhaite pouvoir utiliser cette api
                 # en mode "mesure"
                 # Si je comprends la doc, faire un print pourrait donner un résultat : essayons donc.
-                print(
-                    "nom de GPU inconnu, utilisation de la valeur par défaut pour le TDP")
-        self.tdp = self._DEFAULT_TDP
+                print("nom de GPU inconnu, utilisation des valeurs par défaut")
+                self.die_size = self._DEFAULT_GPU_DIE_SIZE
+                self.tdp = self._DEFAULT_GPU_TDP
+                self.memory_size = self._DEFAULT_GPU_MEMORY
+            elif len(sub) == 1:
+                self.tdp = int(sub['TDP'])
+                self.die_size = float(sub['die_size'])
+                self.memory_size = int(sub['memory'])
+            else:
+                self.tdp = sub['TDP'].mean()
+                self.die_size = sub['die_size'].mean()
+                self.memory_size = int(sub['memory'].mean())
+        # then,
+        self.memory = ComponentRAM()
+        self.memory.capacity = self.memory_size
+        self.memory.smart_complete_data()

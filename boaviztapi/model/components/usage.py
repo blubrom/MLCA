@@ -8,7 +8,8 @@ from typing import Dict, Optional
 from boaviztapi.model.components import data_dir
 from boaviztapi.model.components.component import Component
 
-_electricity_emission_factors_df = pd.read_csv(os.path.join(data_dir, 'electricity/electricity_impact_factors.csv'))
+_electricity_emission_factors_df = pd.read_csv(os.path.join(
+    data_dir, 'electricity/electricity_impact_factors.csv'))
 
 DEFAULT_SIG_FIGURES: int = 3
 
@@ -41,6 +42,10 @@ class Usage(Component):
     @abstractmethod
     def impact_adp(self) -> (float, int):
         return self.hours_electrical_consumption * self.get_duration_hours() * self.adp_factor, DEFAULT_SIG_FIGURES
+
+    @abstractmethod
+    def power_draw(self) -> (float, int):
+        return self.hours_electrical_consumption, 3
 
     @abstractmethod
     def get_hours_electrical_consumption(self):
@@ -107,10 +112,14 @@ class UsageServer(Usage):
     def impact_adp(self) -> (float, int):
         return super().impact_adp()[0], 3
 
+    def power_draw(self) -> (float, int):
+        return super().power_draw()
+
     def get_hours_electrical_consumption(self) -> float:
         hours_electrical_consumption = 0
         for values in self.workload.values():
-            hours_electrical_consumption += values["time"] * values["power"] * self.max_power
+            hours_electrical_consumption += values["time"] * \
+                values["power"] * self.max_power
         return hours_electrical_consumption / 1000
 
     def smart_complete_data(self):
@@ -146,21 +155,34 @@ class UsageCloud(UsageServer):
         return super().get_duration_hours()
 
 
-class UsageComponent(Usage):
+class UsageSetup(Usage):
+
+    dynamic_ratio: Optional[float] = None
+    # TODO: get the real dynamic ratio from BLOOM
+    _DEFAULT_DYNAMIC_RATIO = 1
+
     def impact_gwp(self) -> (float, int):
-        return super().impact_gwp()
+        i, s = super().impact_gwp()
+        return i * self.dynamic_ratio, s
 
     def impact_pe(self) -> (float, int):
-        return super().impact_pe()
+        i, s = super().impact_pe()
+        return i * self.dynamic_ratio, s
 
     def impact_adp(self) -> (float, int):
-        return super().impact_adp()
+        i, s = super().impact_adp()
+        return i * self.dynamic_ratio, s
 
     def smart_complete_data(self):
         super().smart_complete_data()
-        
+        if self.dynamic_ratio is None:
+            self.dynamic_ratio = self._DEFAULT_DYNAMIC_RATIO
+
     def get_hours_electrical_consumption(self):
         return super().get_hours_electrical_consumption()
-      
+
     def get_duration_hours(self):
         return super().get_duration_hours()
+
+    def power_draw(self) -> (float, int):
+        return super().power_draw()

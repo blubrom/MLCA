@@ -83,8 +83,14 @@ class Case(BaseModel):
 
 class Gpu(BaseModel):
     units: Optional[int] = None
-    tdp: Optional[int] = None
+    die_size: Optional[float] = None
+    process: Optional[float] = None
+    manufacturer: Optional[str] = None
+    manufacture_date: Optional[str] = None
     model: Optional[str] = None
+    architecture: Optional[str] = None
+    tdp: Optional[int] = None
+    memory_size: Optional[int] = None
 
     def to_component(self):
         return ComponentGPU(**self.dict())
