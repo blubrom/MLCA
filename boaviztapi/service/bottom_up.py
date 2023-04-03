@@ -39,15 +39,15 @@ def bottom_up_setup(setup: MLSetup, impact_codes: Optional[Set[str]] = None) -> 
     perspective = {
         'relative_SNBC': {
             'value': rd.round_to_sigfig(setup.psf * gwp_relative_SNBC[0], gwp_relative_SNBC[1]),
-            'unit': 'Emissions of X Person per year in a sustanability scenario'
+            'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'
         },
         'relative_PB_Climate_Change': {
             'value': rd.round_to_sigfig(setup.psf*gwp_relative_PB[0], gwp_relative_PB[1]),
-            'unit': 'person'
+            'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'
         },
         'relative_PB_ADP': {
             'value': rd.round_to_sigfig(setup.psf*adp_relative_PB[0], adp_relative_PB[1]),
-            'unit': 'person'
+            'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'
         }
     }
     return impacts, perspective

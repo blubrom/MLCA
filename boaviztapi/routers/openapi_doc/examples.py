@@ -62,7 +62,7 @@ server_configuration_examples = {
                     "power": 0.3941
                 }
             }
-        }
+                }
     },
 }
 components_examples = {
@@ -110,17 +110,23 @@ cloud_usage_example = {
 }
 
 ml_setup_example = {
-  "server": {
-    "model":
-    {
-        "manufacturer": "Dell",
-        "name": "R740",
-        "type": "rack",
-        "year": 2020,
-        "archetype": "dellR740"
+    "server": {
+        "model": {
+            "manufacturer": "Dell",
+            "name": "R740",
+            "type": "rack",
+            "year": 2020,
+            "archetype": "dellR740"
+        }
     },
-  },
-  "gpu": {"units": 2},
-  "psf": 1,
-  "train_time": 1
+    "gpu": {
+        "units": 2696,
+        "model": "NVIDIA Tesla V100 PCIe 32 GB"
+    },
+    "psf": 1,
+    "usage": {
+        "days_use_time": 118,
+        "hours_use_time": 5.683,
+        "usage_location": "FRA"
+    }
 }

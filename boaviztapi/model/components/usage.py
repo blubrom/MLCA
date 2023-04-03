@@ -158,8 +158,12 @@ class UsageCloud(UsageServer):
 class UsageSetup(Usage):
 
     dynamic_ratio: Optional[float] = None
-    # TODO: get the real dynamic ratio from BLOOM
-    _DEFAULT_DYNAMIC_RATIO = 1
+    # default ratio computed from BLOOM analysis data
+    # over a period of a month:
+    # infrastructure mode : 223 kWh
+    # idle mode : 887 kWh
+    # production mode : 1310 kWh
+    _DEFAULT_DYNAMIC_RATIO = (223 + 887 + 1310)/1310
 
     def impact_gwp(self) -> (float, int):
         i, s = super().impact_gwp()

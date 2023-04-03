@@ -8,7 +8,8 @@ from pydantic import BaseModel
 
 from boaviztapi.model.components import data_dir
 
-_cpu_df = pd.read_csv(os.path.join(data_dir, 'components/cpu_infos.csv'))
+_cpu_df = pd.read_csv(os.path.join(
+    data_dir, 'components/cpu_infos.csv'), skiprows=1)
 _ram_df = pd.read_csv(os.path.join(data_dir, 'components/ram_manufacture.csv'))
 _ssd_df = pd.read_csv(os.path.join(data_dir, 'components/ssd_manufacture.csv'))
 _cpu_df['manufacture_date'] = _cpu_df['manufacture_date'].astype(
@@ -90,12 +91,9 @@ class ComponentCPU(Component):
         "constant_core_impact": 0.491
     }
 
-    _DEFAULT_CPU_DIE_SIZE_PER_CORE = 0.245
-
-    _DEFAULT_CPU_CORE_UNITS = 24
-
-   # Default value (Any) in the CPU_TDP_Green_Algorithms data
-    _DEFAULT_TDP_PER_CORE = 12
+    # TODO: choose better default values once cpu data is better
+    _DEFAULT_CPU_DIE_SIZE = 2.10
+    _DEFAULT_TDP = 65
 
     core_units: Optional[int] = None
     die_size: Optional[float] = None
@@ -108,79 +106,68 @@ class ComponentCPU(Component):
     tdp: Optional[int] = None
 
     def impact_gwp(self) -> (float, int):
-        core_impact = self._IMPACT_FACTOR_DICT['constant_core_impact']
         cpu_die_impact = self._IMPACT_FACTOR_DICT['gwp']['die_impact']
         cpu_impact = self._IMPACT_FACTOR_DICT['gwp']['impact']
         significant_figures = rd.min_significant_figures(
-            self.die_size_per_core, core_impact, cpu_die_impact, cpu_impact)
-        return (self.core_units * self.die_size_per_core + core_impact) * cpu_die_impact + cpu_impact, significant_figures
+            self.die_size, cpu_die_impact, cpu_impact)
+        return self.die_size * cpu_die_impact + cpu_impact, significant_figures
 
     def impact_pe(self) -> (float, int):
-        core_impact = self._IMPACT_FACTOR_DICT['constant_core_impact']
         cpu_die_impact = self._IMPACT_FACTOR_DICT['pe']['die_impact']
         cpu_impact = self._IMPACT_FACTOR_DICT['pe']['impact']
         significant_figures = rd.min_significant_figures(
-            self.die_size_per_core, core_impact, cpu_die_impact, cpu_impact)
-        return (self.core_units * self.die_size_per_core + core_impact) * cpu_die_impact + cpu_impact, significant_figures
+            self.die_size, cpu_die_impact, cpu_impact)
+        return self.die_size * cpu_die_impact + cpu_impact, significant_figures
 
     def impact_adp(self) -> (float, int):
-        core_impact = self._IMPACT_FACTOR_DICT['constant_core_impact']
         cpu_die_impact = self._IMPACT_FACTOR_DICT['adp']['die_impact']
         cpu_impact = self._IMPACT_FACTOR_DICT['adp']['impact']
         significant_figures = rd.min_significant_figures(
-            self.die_size_per_core, core_impact, cpu_die_impact, cpu_impact)
-        return (self.core_units * self.die_size_per_core + core_impact) * cpu_die_impact + cpu_impact, significant_figures
+            self.die_size, cpu_die_impact, cpu_impact)
+        return self.die_size * cpu_die_impact + cpu_impact, significant_figures
 
     def power_draw(self) -> (float, int):
-        return self.tdp, 3
+        return self.tdp, rd.significant_number(self.tdp)
+
+    def filter_cpu_df(self):
+        sub = _cpu_df
+        if self.model:
+            sub = sub[sub['model'] == self.model]
+        if self.tdp:
+            sub = sub[sub['TDP'] == self.tdp]
+        if self.core_units:
+            sub = sub[sub['core_units'] == self.core_units]
+        if self.manufacturer:
+            sub = sub[sub['manufacturer'] == self.manufacturer]
+        if self.family:
+            sub = sub[sub['family'] == self.family]
+        if self.manufacture_date:
+            sub = sub[sub['manufacture_date'] == self.manufacture_date]
+        if self.process:
+            sub = sub[sub['process'] == self.process]
+        if self.die_size:
+            sub = sub[sub['die_size'] == self.die_size]
+        return sub
 
     def smart_complete_data(self):
-        # TODO: refactor to include searching for the TDP and also getting the info
-        # (die_size_per_core and core_units)from the CPU model name.
-        if not self.tdp and self.model:
-            sub = _cpu_tdp_df[_cpu_tdp_df['model'] == self.model]
-            if len(sub) == 1:
-                self.tdp = int(sub['TDP'])
-                return
-            else:
-                print(
-                    "nom de CPU inconnu, utilisation de la valeur par défaut pour le TDP")
-        self.tdp = self._DEFAULT_TDP_PER_CORE * self._DEFAULT_CPU_CORE_UNITS
-
-        if self.die_size_per_core and self.core_units:
-            return
-
-        elif self.die_size and self.core_units:
-            self.die_size_per_core = self.die_size / self.core_units
+        if self.die_size and self.tdp:
             return
 
         # Let's infer the data
         else:
-            sub = _cpu_df
-
-            if self.family:
-                sub = sub[sub['family'] == self.family]
-
-            if self.core_units:
-                sub = sub[sub['core_units'] == self.core_units]
-
+            sub = self.filter_cpu_df()
+            # if there is no match or no filter
             if len(sub) == 0 or len(sub) == len(_cpu_df):
-                self.die_size_per_core = self._DEFAULT_CPU_DIE_SIZE_PER_CORE
-                self.core_units = self._DEFAULT_CPU_CORE_UNITS
+                self.die_size = self._DEFAULT_CPU_DIE_SIZE
+                self.tdp = self._DEFAULT_TDP
 
             elif len(sub) == 1:
-                self.die_size_per_core = float(sub['die_size_per_core'])
-                self.core_units = int(sub['core_units'])
-
+                self.die_size = float(sub['die_size'])
+                self.tdp = int(sub['TDP'])
+            # if there are multiple matches, choose the mean value. (Boavizta chose max)
             else:
-                sub['_scope3'] = sub[['core_units', 'die_size_per_core']].apply(
-                    lambda x: x[0] * x[1], axis=1)
-                sub = sub.sort_values(by='_scope3', ascending=False)
-                row = sub.iloc[0]
-                die_size_per_core = float(row['die_size_per_core'])
-                core_units = int(row['core_units'])
-                self.die_size_per_core = die_size_per_core
-                self.core_units = core_units
+                self.die_size = float(sub['die_size'].mean())
+                self.tdp = int(sub['TDP'].mean())
 
 
 class ComponentRAM(Component):
@@ -240,20 +227,27 @@ class ComponentRAM(Component):
         return ((self.capacity / self.density) * ram_die_impact + ram_impact, significant_figure)
 
     def power_draw(self) -> (float, int):
-        return self._POWER_DRAW_PER_GB * self.capacity, 3
+        return self._POWER_DRAW_PER_GB * self.capacity, rd.min_significant_figures(self._POWER_DRAW_PER_GB, self.capacity)
+
+    def filter_ram_df(self):
+        sub = _ram_df
+        if self.manufacturer:
+            sub = sub[sub['manufacturer'] == self.manufacturer]
+
+        if self.process:
+            sub = sub[sub['process'] == self.process]
+        return sub
+
+    def get_max_density(self, sub):
+        sub['_scope3'] = sub['density'].apply(lambda x: self.capacity / x)
+        sub = sub.sort_values(by='_scope3', ascending=False)
+        return float(sub.iloc[0].density)
 
     def smart_complete_data(self):
         if self.capacity and self.density:
             return
         else:
-            sub = _ram_df
-
-            if self.manufacturer:
-                sub = sub[sub['manufacturer'] == self.manufacturer]
-
-            if self.process:
-                sub = sub[sub['process'] == self.process]
-
+            sub = self.filter_ram_df()
             if len(sub) == 0 or len(sub) == len(_cpu_df):
                 self.capacity = self.capacity if self.capacity else self._DEFAULT_RAM_CAPACITY
                 self.density = self._DEFAULT_RAM_DENSITY
@@ -263,12 +257,8 @@ class ComponentRAM(Component):
                 self.density = float(sub['density'])
 
             else:
-                capacity = self.capacity if self.capacity else self._DEFAULT_RAM_CAPACITY
-                sub['_scope3'] = sub['density'].apply(lambda x: capacity / x)
-                sub = sub.sort_values(by='_scope3', ascending=False)
-                density = float(sub.iloc[0].density)
-                self.capacity = capacity
-                self.density = density
+                self.capacity = self.capacity if self.capacity else self._DEFAULT_RAM_CAPACITY
+                self.density = self.get_max_density(sub)
 
 
 class ComponentHDD(Component):
@@ -361,15 +351,17 @@ class ComponentSSD(Component):
         # TODO: explore some ressources about the consumption of storage
         return 0, 3
 
+    def filter_ssd_df(self):
+        sub = _ssd_df
+        if self.manufacturer:
+            sub = sub[sub['manufacturer'] == self.manufacturer]
+        return sub
+
     def smart_complete_data(self):
         if self.capacity and self.density:
             return
         else:
-            sub = _ssd_df
-
-            if self.manufacturer:
-                sub = sub[sub['manufacturer'] == self.manufacturer]
-
+            sub = self.filter_ssd_df()
             if len(sub) == 0 or len(sub) == len(_cpu_df):
                 self.capacity = self.capacity if self.capacity else self._DEFAULT_SSD_CAPACITY
                 self.density = self.density if self.density else self._DEFAULT_SSD_DENSITY
@@ -633,26 +625,32 @@ class ComponentGPU(Component):
         return self.die_size * gpu_die_impact + gpu_impact, significant_figures
 
     def power_draw(self) -> (float, int):
-        return self.tdp, 3
+        return self.tdp, rd.significant_number(self.tdp)
+
+    def filter_gpu_df(self):
+        sub = _gpu_df
+        if self.model:
+            sub = sub[sub['model'] == self.model]
+        if self.tdp:
+            sub = sub[sub['TDP'] == self.tdp]
+        if self.process:
+            sub = sub[sub['process'] == self.process]
+        if self.architecture:
+            sub = sub[sub['architecture'] == self.architecture]
+        if self.manufacture_date:
+            sub = sub[sub['manufacture_date'] == self.manufacture_date]
+        if self.die_size:
+            sub = sub[sub['die_size'] == self.die_size]
+        if self.memory:
+            sub = sub[sub['memory'] == self.memory]
+        return sub
 
     def smart_complete_data(self):
         # first complete infos about the TDP, the die size and the memory size
         if not (self.tdp and self.die_size and self.memory_size):
-            sub = _gpu_df
-            if self.model:
-                sub = sub[sub['model'] == self.model]
-            if self.tdp:
-                sub = sub[sub['TDP'] == self.tdp]
-            if self.die_size:
-                sub = sub[sub['die_size'] == self.die_size]
-            if self.architecture:
-                sub = sub[sub['architecture'] == self.architecture]
-            if self.process:
-                sub = sub[sub['process'] == self.process]
-            if self.manufacture_date:
-                sub = sub[sub['manufacture_date'] == self.manufacture_date]
+            sub = self.filter_gpu_df()
 
-            if len(sub) == 0 or len(sub) == len(_cpu_df):
+            if len(sub) == 0 or len(sub) == len(_gpu_df):
                 # TODO: savoir renvoyer un log disant que le nom est inconnu
                 # pour cela, regarder la doc de fastapi, au moins pour le test
                 # à terme, ce ne sera pas forcément nécéssaire vu qu'on peut faire l'hypothèse que les données arriveront depuis
@@ -668,8 +666,8 @@ class ComponentGPU(Component):
                 self.die_size = float(sub['die_size'])
                 self.memory_size = int(sub['memory'])
             else:
-                self.tdp = sub['TDP'].mean()
-                self.die_size = sub['die_size'].mean()
+                self.tdp = int(sub['TDP'].mean())
+                self.die_size = float(sub['die_size'].mean())
                 self.memory_size = int(sub['memory'].mean())
         # then,
         self.memory = ComponentRAM()
