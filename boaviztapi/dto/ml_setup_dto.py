@@ -15,6 +15,8 @@ class MLSetupDTO(BaseModel):
     usage: Optional[UsageSetup] = None
     gpu_usage_ratio: Optional[float] = None
     cpu_usage_ratio: Optional[float] = None
+    average_usage: Optional[float] = None
+    hardware_replacement_rate: Optional[float] = None
 
     _DEFAULT_USAGE_RATIO = 1
 
@@ -26,6 +28,8 @@ class MLSetupDTO(BaseModel):
             setup.gpus = [ComponentGPU(**self.gpu.dict())
                           for _ in range(self.gpu.units)]
         setup.psf = self.psf
+        setup.average_usage = self.average_usage
+        setup.hardware_replacement_rate = self.hardware_replacement_rate
         setup.usage = self.get_usage()
         setup.gpu_usage = self.get_gpu_usage()
         setup.cpu_usage = self.get_cpu_usage()

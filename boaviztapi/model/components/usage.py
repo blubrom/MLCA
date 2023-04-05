@@ -158,6 +158,7 @@ class UsageCloud(UsageServer):
 class UsageSetup(Usage):
 
     dynamic_ratio: Optional[float] = None
+    minute_use_time: Optional[float] = None
     # default ratio computed from BLOOM analysis data
     # over a period of a month:
     # infrastructure mode : 223 kWh
@@ -186,7 +187,7 @@ class UsageSetup(Usage):
         return super().get_hours_electrical_consumption()
 
     def get_duration_hours(self):
-        return super().get_duration_hours()
+        return super().get_duration_hours() + (self.minute_use_time or 0) / 60
 
     def power_draw(self) -> (float, int):
         return super().power_draw()

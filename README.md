@@ -81,7 +81,7 @@ You can run the tests with `pytest`.
 
 ### OpenAPI specification (Swagger)
 
-Once API server is launched API swagger is available at [httsp://localhost:5000/docs](https://localhost:5000/docs).
+Once API server is launched API swagger is available at [http://localhost:5000/docs](http://localhost:5000/docs).
 
 
 ## :woman: Contributing
@@ -94,11 +94,11 @@ You can build a source distribution (installable with pip) with `python setup.py
 
 We use [Semantic Versioning 2.0.0](https://semver.org/)
 
-|    Type     | Description                                                          |    Command        |
-| :---        |    :----:                                                            |              ---: |
-| MAJOR       | version when you make incompatible API changes                       | ```make major```  |
-| MINOR       | version when you add functionality in a backwards compatible manner  | ```make minor```  |
-| PATCH       | version when you make backwards compatible bug fixes                 | ```make patch```  |
+| Type  |                             Description                             |          Command |
+| :---- | :-----------------------------------------------------------------: | ---------------: |
+| MAJOR |           version when you make incompatible API changes            | ```make major``` |
+| MINOR | version when you add functionality in a backwards compatible manner | ```make minor``` |
+| PATCH |        version when you make backwards compatible bug fixes         | ```make patch``` |
 
 ## :scroll: License
 

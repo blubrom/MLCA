@@ -38,20 +38,28 @@ class ServerDTO(BaseModel):
     add_method: Optional[str] = None
     add_date: Optional[str] = None
 
+    _DEFAULT_UNITS = 1
+
     def get_component_list(self) -> List[Component]:
         components = []
         if self.configuration:
             if self.configuration.cpu:
+                if not self.configuration.cpu.units:
+                    self.configuration.cpu.units = self._DEFAULT_UNITS
                 components += [ComponentCPU(**self.configuration.cpu.dict())
                                for _ in range(self.configuration.cpu.units)]
 
             if self.configuration.ram:
                 for ram in self.configuration.ram:
+                    if not ram.units:
+                        ram.units = self._DEFAULT_UNITS
                     for _ in range(ram.units):
                         components.append(ComponentRAM(**ram.dict()))
 
             if self.configuration.disk:
                 for disk in self.configuration.disk:
+                    if not disk.units:
+                        disk.units = self._DEFAULT_UNITS
                     if disk.type == 'ssd':
                         for _ in range(disk.units):
                             components.append(ComponentSSD(**disk.dict()))
@@ -60,6 +68,8 @@ class ServerDTO(BaseModel):
                             components.append(ComponentHDD(**disk.dict()))
 
             if self.configuration.power_supply:
+                if not self.configuration.power_supply.units:
+                    self.configuration.power_supply.units = self._DEFAULT_UNITS
                 components += [ComponentPowerSupply(**self.configuration.power_supply.dict())
                                for _ in range(self.configuration.power_supply.units)]
 

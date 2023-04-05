@@ -126,7 +126,9 @@ ml_setup_example = {
     "psf": 1,
     "usage": {
         "days_use_time": 118,
-        "hours_use_time": 5.683,
-        "usage_location": "FRA"
+        "hours_use_time": 5,
+        "minute_use_time": 41,
+        "usage_location": "FRA",
+        "gwp_factor": 57.3
     }
 }

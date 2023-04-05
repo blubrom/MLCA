@@ -29,28 +29,30 @@ class MLSetup(BaseModel):
     model: Model = None
     cpu_usage: float = None
     gpu_usage: float = None
+    average_usage: float = None
+    hardware_replacement_rate: float = None
     # train_time_hours: float = None
 
     # figures from Luccioni et al. (2022)
     # "Estimating the carbon footprint of Bloom, a 176B parameter Language Model"
     # https://doi.org/10.48550/ARXIV.2211.02001
-    _AVERAGE_USAGE = .85
-    _REPLACEMENT_RATE = 6
-    _DEFAULT_GPU_NUMBER = 1
+    _DEFAULT_AVERAGE_USAGE = .85
+    # in years
+    _DEFAULT_REPLACEMENT_RATE = 6
 
+    _DEFAULT_GPU_NUMBER = 1
     _DEFAULT_PSF = 1
+    # in hours
     _DEFAULT_TIME = 1
 
     def embodied_impact_hour(self, manufacture_impact) -> float:
-        return manufacture_impact / (self._REPLACEMENT_RATE * 365 * 24 * self._AVERAGE_USAGE)
+        return manufacture_impact / (self.hardware_replacement_rate * 365 * 24 * self.average_usage)
 
     def embodied_impact_gwp(self) -> (float, int):
         manufacture_gpu = [g.impact_gwp() for g in self.gpus]
         manufacture_server = self.server.impact_manufacture_gwp()
-        sum_impacts_manufacture = manufacture_server[0] + \
-            sum(item[0] for item in manufacture_gpu)
-        significant_figure_manufacture = min(
-            [manufacture_server[1]] + [item[1] for item in manufacture_gpu])
+        sum_impacts_manufacture, significant_figure_manufacture = functools.reduce(
+            (lambda acc, i: (acc[0] + i[0], min(acc[1], i[1]))), manufacture_gpu, manufacture_server)
         embodied = self.usage.get_duration_hours() * \
             self.embodied_impact_hour(sum_impacts_manufacture)
         return embodied, significant_figure_manufacture
@@ -165,6 +167,10 @@ class MLSetup(BaseModel):
             self.gpu_usage = self._DEFAULT_USAGE_RATE
         if self.cpu_usage is None:
             self.cpu_usage = self._DEFAULT_USAGE_RATE
+        if self.average_usage is None:
+            self.average_usage = self._DEFAULT_AVERAGE_USAGE
+        if self.hardware_replacement_rate is None:
+            self.hardware_replacement_rate = self._DEFAULT_REPLACEMENT_RATE
 
         for gpu in self.gpus:
             gpu.smart_complete_data()
@@ -173,7 +179,9 @@ class MLSetup(BaseModel):
         if self.usage.get_duration_hours() == 0:
             self.usage.hours_use_time = self._DEFAULT_TIME
         self.usage.smart_complete_data()
-        self.usage.hours_electrical_consumption = self.dynamic_power()[0]
+        # use the modelisation for the power consumption only if the user did not input a value to use.
+        if self.usage.hours_electrical_consumption is None:
+            self.usage.hours_electrical_consumption = self.dynamic_power()[0]
 
     def get_default_gpu(self) -> List[ComponentGPU]:
         return [ComponentGPU() for _ in range(self._DEFAULT_GPU_NUMBER)]
