@@ -89,6 +89,12 @@ power_supply_description = "# ✔️Power supply impacts from configuration\n" +
 case_description = "# ✔️Case impacts from configuration\n" + \
     components_description + default_calculation
 
+gpu_description = "# ✔️CPU impacts from configuration\n" + components_description + \
+                  "\n### 🧮 Measure\n" \
+                  "<h3>gpu<sub>manuf<sub><em>criteria</em></sub></sub> = "\
+                  "gpu<sub>diesize</sub> x gpu<sub>manuf_die<sub><em>criteria</em></sub></sub> + " \
+                  "gpu<sub>manuf_base<sub><em>criteria</em></sub></sub></h3> "
+
 cloud_aws_description = "# ✔️AWS instance impacts from instance type and usage \n" \
                         "### 📋 Instance type \n" \
                         "AWS name of the chosen instance. You can retrieve the [list here](#/cloud/server_get_all_archetype_name_v1_cloud_all_aws_instances_get).\n" \

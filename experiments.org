@@ -1,0 +1,210 @@
+Experiments for validating our tool :
+
+first, run the program, we will then be able to send it requests
+#+begin_src shell :results output :exports both
+pipenv run uvicorn boaviztapi.main:app --host=localhost --port 5000 &
+#+end_src
+
+* replicating the Bloom estimates from [Luccioni2021estimating]
+
+** Gathering information about the setup
+To replicate their experiments, we first need to gather some
+information on the time duration and hardware setup for the training
+phase.
+
+We can see in the paper that the training phase lasted for 118 days, 5
+hours and 41 mins for a total of 1,082,990 GPU hours. (table 1)
+
+in section 4.1, we can read that training used on average 48 computing
+nodes with 8 GPUs each.
+Combining the real time and these information about the setup, we
+obtain
+
+#+begin_src python :results output :exports both
+real_time_hours = 118*24 + 5 + 41/60
+estimated_gpu_hours = real_time_hours * 48 * 8
+print(estimated_gpu_hours)
+#+end_src
+
+#+RESULTS:
+: 1089670.4
+
+we obtain an estimate of the number of GPU hours of 1,089,670.4 hours
+this gives us a pretty close figure to the real GPU time.
+
+It is written in the paper that training took place on the Jean Zay
+supercomputer, using [[https://buy.hpe.com/fr/fr/compute/apollo-systems/apollo-6500-system/apollo-6500-system/hpe-apollo-6500-gen10-plus-system/p/1013092236][HPE's Apollo 6500 Gen10 Plus]]. We can read on
+their website that it uses AMD EPYC 7000 Series CPUs. Combining this
+information with informations about the Jean Zay supercomputer on
+[[http://www.idris.fr/jean-zay/cpu/jean-zay-cpu-hw.html#gpu_p13][IDRIS's website]], we can see that only the **gpu_p5**  partition uses
+such CPUs. 
+We can conclude that for each of the 48 used nodes, the server
+configuration is :
++ 2 CPUs : AMD Milan EPYC 7543
++ 512 Go of Memory
++ 8 NVIDIA A100 SXM4 80Go
+
+** comparing the server footprint with the PCF sheet.
+
+   In section 4.1, it is stated that they use values provided in the
+   [[https://www.hpe.com/psnow/doc/a50005151enw][HPE ProLiant DL345 Gen10 Plus PCF]], the closest server with
+   information provided. In this PCF sheet, we can read that servers
+   are of type rack and that the estimated Carbon Footprint is of
+   2503.2 kg CO_2 e.
+   If we try our tool with the server configuration used for training,
+   we obtain :
+   #+begin_src shell :results output :exports both
+   curl -X 'POST' \
+  'http://localhost:5000/v1/server/?verbose=true' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": {
+      "type": "rack"
+    },
+    "configuration": {
+      "cpu": {
+        "units": 2,
+        "model": "AMD Milan EPYC 7543"
+      },
+      "ram": [
+        {
+          "units": 1,
+          "capacity": 512
+        }
+      ]
+    }
+}'
+   #+end_src
+
+   #+RESULTS:
+   : {"impacts":{"gwp":{"manufacture":2300.0,"use":1170.0,"unit":"kgCO2eq"},"pe":{"manufacture":29000.0,"use":39700.0,"unit":"MJ"},"adp":{"manufacture":0.17,"use":0.000198,"unit":"kgSbeq"}},"verbose":{"CPU-1":{"unit":2,"hash":"50cbc426060b04c31b0009f1fb833c7a257a8e5d130d51b4dba3f36bfb49bef2","die_size":{"input_value":null,"used_value":2.1,"status":"SET"},"model":{"input_value":"AMD Milan EPYC 7543","used_value":"AMD Milan EPYC 7543","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":65,"status":"SET"},"impacts":{"gwp":{"value":26.0,"unit":"kgCO2eq"},"pe":{"value":420.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":1,"hash":"05f20fab521cfc551ec4d5ff4888e0ed7b1cccf43170e03f2234ec6b4c99db1c","capacity":{"input_value":512,"used_value":512,"status":"UNCHANGED"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":1800.0,"unit":"kgCO2eq"},"pe":{"value":22000.0,"unit":"MJ"},"adp":{"value":0.053,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"083dcd17f9997756af73de7c61f0cf2986b25075ad00bbf7c07e08cc80a2183f","case_type":{"input_value":"rack","used_value":"rack","status":"UNCHANGED"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"cb269039943b145f924c394acd2f665c10b23bddf954428af81bd8eccaff3d6a","capacity":{"input_value":null,"used_value":1000,"status":"SET"},"density":{"input_value":null,"used_value":48.5,"status":"SET"},"impacts":{"gwp":{"value":52.0,"unit":"kgCO2eq"},"pe":{"value":640.0,"unit":"MJ"},"adp":{"value":0.0019,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"be84aabaaac41126e1bd93ec3c10b355c6c7534cf9e3d7337cef9d6d0bb116c6","unit_weight":{"input_value":null,"used_value":2.99,"status":"SET"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}},"USAGE-1":{"unit":1,"hash":0,"years_use_time":{"input_value":null,"used_value":1,"status":"SET"},"hours_electrical_consumption":{"input_value":null,"used_value":0.35175,"status":"SET"},"usage_location":{"input_value":null,"used_value":"EEE","status":"SET"},"gwp_factor":{"input_value":null,"used_value":0.38,"status":"SET"},"pe_factor":{"input_value":null,"used_value":12.874,"status":"SET"},"adp_factor":{"input_value":null,"used_value":6.42e-08,"status":"SET"},"max_power":{"input_value":null,"used_value":510,"status":"SET"},"workload":{"100":{"time":{"input_value":null,"used_value":0.15,"status":"SET"},"power":{"input_value":null,"used_value":1.0,"status":"SET"}},"50":{"time":{"input_value":null,"used_value":0.5499999999999999,"status":"SET"},"power":{"input_value":null,"used_value":0.7235294117647059,"status":"SET"}},"10":{"time":{"input_value":null,"used_value":0.19999999999999998,"status":"SET"},"power":{"input_value":null,"used_value":0.5117647058823529,"status":"SET"}},"idle":{"time":{"input_value":null,"used_value":0.09999999999999999,"status":"SET"},"power":{"input_value":null,"used_value":0.3941176470588235,"status":"SET"}},"off":{"time":{"input_value":null,"used_value":0.0,"status":"SET"},"power":{"input_value":null,"used_value":0.0,"status":"SET"}}},"impacts":{"gwp":{"value":1170.0,"unit":"kgCO2eq"},"pe":{"value":39700.0,"unit":"MJ"},"adp":{"value":0.000198,"unit":"kgSbeq"}}}}}
+
+we can see manufacture impacts of 2300 kg CO_2 e. This impact is close
+to the 2500 kgCO_2 e provided on the PCF sheet and is mainly impacted
+by the quantity of memory used, as it accounts for 1800 kg CO_2 e.
+
+** comparing the GPU footprint with the chosen value
+
+In section 4.1, it is stated that a value of 150 kg CO_2 e is
+chosen. Taking a look at the source, there is no real justification
+given for that value. Given that in [Loubet2023life] a small GPUs
+manufacture is estimated at emiting around 30 kg CO_2 e, we can
+hypothesize that GPU manufacture impacts would be in the order of 50
+to 150 kg CO_2 e.
+
+#+begin_src shell :results output :exports both
+curl -X 'POST' \
+  'http://localhost:5000/v1/component/gpu?verbose=true' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "model": "NVIDIA A100 SXM4 80 GB"
+}'
+#+end_src
+
+#+RESULTS:
+: {"impacts":{"gwp":{"manufacture":25.4,"use":"not implemented","unit":"kgCO2eq"},"pe":{"manufacture":375.0,"use":"not implemented","unit":"MJ"},"adp":{"manufacture":0.02,"use":"not implemented","unit":"kgSbeq"}},"verbose":{"units":1,"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},"memory":{"input_value":null,"used_value":{"hash":"1d674b295466533ec734e75dd37f1c46e74a3decf6c0d5e55ebd348d81a3c48c","TYPE":"RAM","capacity":80,"density":0.625,"process":null,"manufacturer":null,"manufacture_date":null,"model":null,"integrator":null},"status":"SET"},"impacts":{"gwp":{"value":25.4,"unit":"kgCO2eq"},"pe":{"value":375.0,"unit":"MJ"},"adp":{"value":0.02,"unit":"kgSbeq"}}}}
+
+** Estimating the total impacts
+
+   #+begin_src shell :results output :exports both
+curl -X 'POST' \
+  'http://localhost:5000/v1/mlca/?verbose=true' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "server": {
+    "model": {
+      "type": "rack"
+    },
+    "configuration": {
+      "cpu": {
+        "units": 2,
+        "model": "AMD Milan EPYC 7543"
+      },
+      "ram": [
+        {
+          "units": 1,
+          "capacity": 0
+        }
+      ]
+    }
+  },
+  "gpu": {
+    "units": 8,
+    "model": "NVIDIA A100 SXM4 80 GB"
+  },
+  "psf": 1,
+  "nb_nodes": 48,
+  "cpu_usage_ratio": 0,
+  "usage": {
+    "days_use_time": 118,
+    "hours_use_time": 5,
+    "minute_use_time": 41,
+    "usage_location": "FRA",
+    "gwp_factor": 57.3E-3
+  }
+}'
+   #+end_src
+
+   #+RESULTS:
+   : {"impacts":{"gwp":{"embodied":2300.0,"direct":77600.0,"total":80000.0,"unit":"kgCO2eq"},"pe":{"embodied":33000.0,"direct":15300000.0,"total":15000000.0,"unit":"MJ"},"adp":{"embodied":0.87,"direct":0.0658,"total":0.93,"unit":"kgSbeq"},"energy consumption":{"value":437000.0,"unit":"kWh"}},"perspective":{"relative_SNBC":{"value":40.0,"unit":"Emissions of X Person per year in the \"Stratégie Nationale Bas Carbone (SNBC)\" sustanability objectives for France"},"relative_PB_Climate_Change":{"value":81.0,"unit":"person in a scenario where the Planetary Boundary for Climate Change is not exceded"},"relative_PB_ADP":{"value":29.0,"unit":"person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded"}},"verbose":{"dynamic impacts":{"gwp":{"value":25100.0,"gpus":25000.0,"ram":93.0,"cpus":0.0,"unit":"kgCO2eq"},"pe":{"value":4940000.0,"gpus":4920000.0,"ram":18300.0,"cpus":0.0,"unit":"MJ"},"adp":{"value":0.0213,"gpus":0.0212,"ram":7.89e-05,"cpus":0.0,"unit":"kgSbeq"}},"manufacture of one server node":{"CPU-1":{"unit":2,"hash":"50cbc426060b04c31b0009f1fb833c7a257a8e5d130d51b4dba3f36bfb49bef2","die_size":{"input_value":null,"used_value":2.1,"status":"SET"},"model":{"input_value":"AMD Milan EPYC 7543","used_value":"AMD Milan EPYC 7543","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":65,"status":"SET"},"impacts":{"gwp":{"value":26.0,"unit":"kgCO2eq"},"pe":{"value":420.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":1,"hash":"5a3596943dcb1ce257c490fefabacf1ebb617a6d39ceaf3ee0cac15f2454aa80","capacity":{"input_value":0,"used_value":32,"status":"MODIFY"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":120.0,"unit":"kgCO2eq"},"pe":{"value":1500.0,"unit":"MJ"},"adp":{"value":0.0049,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"083dcd17f9997756af73de7c61f0cf2986b25075ad00bbf7c07e08cc80a2183f","case_type":{"input_value":"rack","used_value":"rack","status":"UNCHANGED"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"cb269039943b145f924c394acd2f665c10b23bddf954428af81bd8eccaff3d6a","capacity":{"input_value":null,"used_value":1000,"status":"SET"},"density":{"input_value":null,"used_value":48.5,"status":"SET"},"impacts":{"gwp":{"value":52.0,"unit":"kgCO2eq"},"pe":{"value":640.0,"unit":"MJ"},"adp":{"value":0.0019,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"be84aabaaac41126e1bd93ec3c10b355c6c7534cf9e3d7337cef9d6d0bb116c6","unit_weight":{"input_value":null,"used_value":2.99,"status":"SET"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}}},"manufacture of one gpu":{"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},"memory":{"input_value":null,"used_value":{"hash":"1d674b295466533ec734e75dd37f1c46e74a3decf6c0d5e55ebd348d81a3c48c","TYPE":"RAM","capacity":80,"density":0.625,"process":null,"manufacturer":null,"manufacture_date":null,"model":null,"integrator":null},"status":"SET"},"impacts":{"gwp":{"value":25.4,"unit":"kgCO2eq"},"pe":{"value":375.0,"unit":"MJ"},"adp":{"value":0.02,"unit":"kgSbeq"}}}}}
+
+
+* replicating results from [Bannour2021evaluating]
+
+the facility setup is the [[https://doc.lab-ia.fr/][LaBia]].we can see that the only nodes using a
+20 core CPU are: n[101-102]:
+
+-  2 x Intel Xeon Gold 6148 20 cores / 40 threads @ 2.4 GHz (Skylake)
+-  384 GiB of RAM
+-  4 x NVIDIA Tesla V100 with 32 GiB of RAM (NVLink)
+
+using 32 GB of RAM and not the full 384.
+
+while the lab server is using one GTX 1080 Ti with 11GB of memory.
+
+#+begin_src python :results output :exports both
+import subprocess
+
+server = {
+    "model": {
+      "type": "rack"
+    },
+    "configuration": {
+      "cpu": {
+        "units": 2,
+        "model": "AMD Milan EPYC 7543"
+      },
+      "ram": [
+        {
+          "units": 1,
+          "capacity": 512
+        }
+      ]
+    }
+}
+
+facility = {
+  "configuration": {
+      "cpu": {
+      "units" : 1,
+      "model": " Xeon Gold 6148"
+      }
+      
+  }
+}
+
+request = f"curl -x 'POST' \
+ 'http://localhost:5000/v1/server/?verbose=true' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d {server}"
+s = subprocess.run(request, shell = True, capture_output=True, check=True)
+print(request)
+print(s.stdout)
+
+#+end_src
+
+#+RESULTS:

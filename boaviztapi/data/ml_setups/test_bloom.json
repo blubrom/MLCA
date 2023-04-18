@@ -1,0 +1,33 @@
+{
+  "server": {
+    "model": {
+      "type": "rack"
+    },
+    "configuration": {
+      "cpu": {
+        "units": 2,
+        "model": "AMD Milan EPYC 7543"
+      },
+      "ram": [
+        {
+          "units": 1,
+          "capacity": 512
+        }
+      ]
+    }
+  },
+  "gpu": {
+    "units": 8,
+    "model": "Nvidia A100 SXM4 80 GB"
+  },
+  "psf": 1,
+  "nb_nodes": 48,
+  "usage_cpu": 0,
+  "usage": {
+    "days_use_time": 118,
+    "hours_use_time": 5,
+    "minute_use_time": 41,
+    "usage_location": "FRA",
+    "gwp_factor": 57.3E-3
+  }
+}

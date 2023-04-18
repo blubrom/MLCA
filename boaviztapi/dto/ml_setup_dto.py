@@ -9,6 +9,7 @@ from boaviztapi.model.components.usage import UsageSetup
 
 
 class MLSetupDTO(BaseModel):
+    nb_nodes: Optional[int] = None
     server: Optional[ServerDTO] = None
     gpu: Optional[Gpu] = None
     psf: Optional[float] = None
@@ -19,6 +20,7 @@ class MLSetupDTO(BaseModel):
     hardware_replacement_rate: Optional[float] = None
 
     _DEFAULT_USAGE_RATIO = 1
+    _DEFAULT_NB_NODES = 1
 
     def to_setup(self):
         setup = MLSetup()
@@ -33,6 +35,7 @@ class MLSetupDTO(BaseModel):
         setup.usage = self.get_usage()
         setup.gpu_usage = self.get_gpu_usage()
         setup.cpu_usage = self.get_cpu_usage()
+        setup.nb_nodes = self.get_nb_nodes()
         return setup
 
     def get_usage(self) -> UsageSetup:
@@ -50,3 +53,6 @@ class MLSetupDTO(BaseModel):
         if self.gpu_usage_ratio is None:
             return self._DEFAULT_USAGE_RATIO
         return self.gpu_usage_ratio
+
+    def get_nb_nodes(self) -> int:
+        return self.nb_nodes or self._DEFAULT_NB_NODES

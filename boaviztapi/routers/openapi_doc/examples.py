@@ -86,6 +86,9 @@ components_examples = {
         "unit_weight": 10
     },
     "case": {"case_type": "rack"},
+    "gpu": {
+        "model": "NVIDIA GeForce GTX 1080 Ti"
+    }
 }
 
 cloud_usage_example = {
@@ -111,24 +114,28 @@ cloud_usage_example = {
 
 ml_setup_example = {
     "server": {
-        "model": {
-            "manufacturer": "Dell",
-            "name": "R740",
-            "type": "rack",
-            "year": 2020,
-            "archetype": "dellR740"
+        "configuration": {
+            "cpu": {
+                "units": 1,
+                "model": "A8-7680"
+            },
+            "ram":
+            [
+                {
+                    "units": 1,
+                    "capacity": 64,
+                    "density": 1.79
+                }
+            ],
         }
     },
     "gpu": {
-        "units": 2696,
-        "model": "NVIDIA Tesla V100 PCIe 32 GB"
+        "units": 1,
+        "model": "NVIDIA GeForce GTX 1080 Ti"
     },
-    "psf": 1,
     "usage": {
-        "days_use_time": 118,
-        "hours_use_time": 5,
-        "minute_use_time": 41,
-        "usage_location": "FRA",
-        "gwp_factor": 57.3
+        "hours_use_time": 12,
+        "gwp_factor": 51.28,
+        "dynamic_ratio": 1
     }
 }

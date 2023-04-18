@@ -14,10 +14,11 @@ mlca_router = APIRouter(
     tags=['mlca']
 )
 
+
 @mlca_router.post('/',
-                    description=ml_setup_impact_description)
+                  description=ml_setup_impact_description)
 async def ml_setup_impact_by_config(ml_setup_dto: MLSetupDTO = Body(None, example=ml_setup_example),
-                                  verbose: bool = True):
+                                    verbose: bool = False):
     setup = ml_setup_dto.to_setup()
     # do a deep copy because bottom_up_setup will auto-complete the missing
     # elements ad we need both the incomplete and the completed version for the verbose option

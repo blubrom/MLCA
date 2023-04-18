@@ -16,21 +16,29 @@ def bottom_up_setup(setup: MLSetup, impact_codes: Optional[Set[str]] = None) -> 
     direct_gwp = setup.direct_impact_gwp()
     direct_pe = setup.direct_impact_pe()
     direct_adp = setup.direct_impact_adp()
+    energy, sig = setup.usage.energy_consumption()
     impacts = {
         'gwp': {
             'embodied': rd.round_to_sigfig(setup.psf*embodied_gwp[0], embodied_gwp[1]),
             'direct': rd.round_to_sigfig(setup.psf*direct_gwp[0], direct_gwp[1]),
+            'total': rd.round_to_sigfig(setup.psf*(embodied_gwp[0] + direct_gwp[0]), min(direct_gwp[1], embodied_gwp[1])),
             'unit': "kgCO2eq"
         },
         'pe': {
             'embodied': rd.round_to_sigfig(setup.psf*embodied_pe[0], embodied_pe[1]),
             'direct': rd.round_to_sigfig(setup.psf*direct_pe[0], direct_pe[1]),
+            'total': rd.round_to_sigfig(setup.psf*(embodied_pe[0] + direct_pe[0]), min(direct_pe[1], embodied_pe[1])),
             'unit': "MJ"
         },
         'adp': {
             'embodied': rd.round_to_sigfig(setup.psf*embodied_adp[0], embodied_adp[1]),
             'direct': rd.round_to_sigfig(setup.psf*direct_adp[0], direct_adp[1]),
+            'total': rd.round_to_sigfig(setup.psf*(embodied_adp[0] + direct_adp[0]), min(direct_adp[1], embodied_adp[1])),
             'unit': "kgSbeq"
+        },
+        'energy consumption': {
+            'value': rd.round_to_sigfig(setup.psf * setup.nb_nodes * energy, sig),
+            'unit': 'kWh'
         }
     }
     gwp_relative_SNBC = setup.gwp_relative_SNBC()
@@ -50,6 +58,7 @@ def bottom_up_setup(setup: MLSetup, impact_codes: Optional[Set[str]] = None) -> 
             'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'
         }
     }
+
     return impacts, perspective
 
 

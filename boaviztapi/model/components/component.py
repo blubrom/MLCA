@@ -162,12 +162,13 @@ class ComponentCPU(Component):
                 self.tdp = self._DEFAULT_TDP
 
             elif len(sub) == 1:
-                self.die_size = float(sub['die_size'])
-                self.tdp = int(sub['TDP'])
+                # do not overwrite data inputed by the user
+                self.die_size = self.die_size or float(sub['die_size'])
+                self.tdp = self.tdp or int(sub['TDP'])
             # if there are multiple matches, choose the mean value. (Boavizta chose max)
             else:
-                self.die_size = float(sub['die_size'].mean())
-                self.tdp = int(sub['TDP'].mean())
+                self.die_size = self.die_size or float(sub['die_size'].mean())
+                self.tdp = self.tdp or int(sub['TDP'].mean())
 
 
 class ComponentRAM(Component):
@@ -651,24 +652,20 @@ class ComponentGPU(Component):
             sub = self.filter_gpu_df()
 
             if len(sub) == 0 or len(sub) == len(_gpu_df):
-                # TODO: savoir renvoyer un log disant que le nom est inconnu
-                # pour cela, regarder la doc de fastapi, au moins pour le test
-                # à terme, ce ne sera pas forcément nécéssaire vu qu'on peut faire l'hypothèse que les données arriveront depuis
-                # un formulaire. Cette hypothèse n'est cependant pas forcément réaliste si on souhaite pouvoir utiliser cette api
-                # en mode "mesure"
-                # Si je comprends la doc, faire un print pourrait donner un résultat : essayons donc.
                 print("nom de GPU inconnu, utilisation des valeurs par défaut")
                 self.die_size = self._DEFAULT_GPU_DIE_SIZE
                 self.tdp = self._DEFAULT_GPU_TDP
                 self.memory_size = self._DEFAULT_GPU_MEMORY
             elif len(sub) == 1:
-                self.tdp = int(sub['TDP'])
-                self.die_size = float(sub['die_size'])
-                self.memory_size = int(sub['memory'])
+                # do not overwrite data inputed by the user
+                self.tdp = self.tdp or int(sub['TDP'])
+                self.die_size = self.die_size or float(sub['die_size'])
+                self.memory_size = self.memory_size or int(sub['memory'])
             else:
-                self.tdp = int(sub['TDP'].mean())
-                self.die_size = float(sub['die_size'].mean())
-                self.memory_size = int(sub['memory'].mean())
+                self.tdp = self.tdp or int(sub['TDP'].mean())
+                self.die_size = self.die_size or float(sub['die_size'].mean())
+                self.memory_size = self.memory_size or int(
+                    sub['memory'].mean())
         # then,
         self.memory = ComponentRAM()
         self.memory.capacity = self.memory_size

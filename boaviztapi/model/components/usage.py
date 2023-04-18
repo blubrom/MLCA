@@ -7,6 +7,7 @@ from typing import Dict, Optional
 
 from boaviztapi.model.components import data_dir
 from boaviztapi.model.components.component import Component
+import boaviztapi.utils.roundit as rd
 
 _electricity_emission_factors_df = pd.read_csv(os.path.join(
     data_dir, 'electricity/electricity_impact_factors.csv'))
@@ -164,18 +165,25 @@ class UsageSetup(Usage):
     # infrastructure mode : 223 kWh
     # idle mode : 887 kWh
     # production mode : 1310 kWh
-    _DEFAULT_DYNAMIC_RATIO = (223 + 887 + 1310)/1310
+    _DEFAULT_DYNAMIC_RATIO = 1310/(1310 - 887)
+
+    dynamic_impact_gwp: Optional[float] = None
+    dynamic_impact_adp: Optional[float] = None
+    dynamic_impact_pe: Optional[float] = None
 
     def impact_gwp(self) -> (float, int):
         i, s = super().impact_gwp()
+        self.dynamic_impact_gwp = i, s
         return i * self.dynamic_ratio, s
 
     def impact_pe(self) -> (float, int):
         i, s = super().impact_pe()
+        self.dynamic_impact_pe = i, s
         return i * self.dynamic_ratio, s
 
     def impact_adp(self) -> (float, int):
         i, s = super().impact_adp()
+        self.dynamic_impact_adp = i, s
         return i * self.dynamic_ratio, s
 
     def smart_complete_data(self):
@@ -191,3 +199,6 @@ class UsageSetup(Usage):
 
     def power_draw(self) -> (float, int):
         return super().power_draw()
+
+    def energy_consumption(self):
+        return self.hours_electrical_consumption * self.get_duration_hours(), DEFAULT_SIG_FIGURES

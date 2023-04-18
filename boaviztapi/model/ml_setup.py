@@ -22,6 +22,7 @@ _PB_WATER_USE_PER_CAPITA = 2.63E+04
 
 
 class MLSetup(BaseModel):
+    nb_nodes: int = None
     server: Server = None
     gpus: List[ComponentGPU] = None
     usage: UsageSetup = None
@@ -31,7 +32,6 @@ class MLSetup(BaseModel):
     gpu_usage: float = None
     average_usage: float = None
     hardware_replacement_rate: float = None
-    # train_time_hours: float = None
 
     # figures from Luccioni et al. (2022)
     # "Estimating the carbon footprint of Bloom, a 176B parameter Language Model"
@@ -55,7 +55,7 @@ class MLSetup(BaseModel):
             (lambda acc, i: (acc[0] + i[0], min(acc[1], i[1]))), manufacture_gpu, manufacture_server)
         embodied = self.usage.get_duration_hours() * \
             self.embodied_impact_hour(sum_impacts_manufacture)
-        return embodied, significant_figure_manufacture
+        return self.nb_nodes * embodied, significant_figure_manufacture
 
     def embodied_impact_pe(self) -> (float, int):
         manufacture_gpu = [g.impact_pe() for g in self.gpus]
@@ -66,7 +66,7 @@ class MLSetup(BaseModel):
             [manufacture_server[1]] + [item[1] for item in manufacture_gpu])
         embodied = self.usage.get_duration_hours() * \
             self.embodied_impact_hour(sum_impacts_manufacture)
-        return embodied, significant_figure_manufacture
+        return self.nb_nodes * embodied, significant_figure_manufacture
 
     def embodied_impact_adp(self) -> (float, int):
         manufacture_gpu = [g.impact_adp() for g in self.gpus]
@@ -77,7 +77,7 @@ class MLSetup(BaseModel):
             [manufacture_server[1]] + [item[1] for item in manufacture_gpu])
         embodied = self.usage.get_duration_hours() * \
             self.embodied_impact_hour(sum_impacts_manufacture)
-        return embodied, significant_figure_manufacture
+        return self.nb_nodes * embodied, significant_figure_manufacture
 
     def dynamic_power(self) -> (float, int):
         def separate_cpu(acc: Tuple[float, float, float], item: Component) -> Tuple[float, float, float]:
@@ -103,34 +103,17 @@ class MLSetup(BaseModel):
             get_power_sig, self.gpus, (0, 5))
         return (self.cpu_usage * power_cpus + self.gpu_usage * power_gpus + power_server)/1000, min(sig_serv, sig_gpu)
 
-    def energy_consumption(self) -> (float, int):
-        # kWh
-        # ratios taken from  Luccioni et al. (2022)
-        # "Estimating the carbon footprint of Bloom, a 176B parameter Language Model"
-        # https://doi.org/10.48550/ARXIV.2211.02001
-        # table 2
-        dynamic_power, sig = self.dynamic_power()
-        dynamic_energy = dynamic_power * self.usage.get_duration_hours()
-        ratio = 12
-        # comes from the paper for Bloom being erroneous
-        # idle_energy = 64/109 * dynamic_energy
-        # infrastructure_energy = 27/109 * dynamic_energy
-        return (dynamic_energy * ratio), sig
-
     def direct_impact_gwp(self) -> (float, int):
-        return self.usage.impact_gwp()
-        # energy_consumption, sig = self.energy_consumption()
-        # return energy_consumption * self.usage.impact_gwp, sig
+        impact_per_node, sig = self.usage.impact_gwp()
+        return self.nb_nodes * impact_per_node, sig
 
     def direct_impact_pe(self) -> (float, int):
-        return self.usage.impact_pe()
-        # energy_consumption, sig = self.energy_consumption()
-        # return energy_consumption * self.usage.impact_pe, sig
+        impact_per_node, sig = self.usage.impact_pe()
+        return self.nb_nodes * impact_per_node, sig
 
     def direct_impact_adp(self) -> (float, int):
-        return self.usage.impact_adp()
-        # energy_consumption, sig = self.energy_consumption()
-        # return energy_consumption * self.usage.impact_adp, sig
+        impact_per_node, sig = self.usage.impact_adp()
+        return self.nb_nodes * impact_per_node, sig
 
     def gwp_relative_SNBC(self) -> (float, int):
         embodied, sig_embodied = self.embodied_impact_gwp()
