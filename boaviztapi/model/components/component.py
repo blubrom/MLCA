@@ -607,23 +607,26 @@ class ComponentGPU(Component):
     def impact_gwp(self) -> (float, int):
         gpu_die_impact = self._IMPACT_FACTOR_DICT['gwp']['die_impact']
         gpu_impact = self._IMPACT_FACTOR_DICT['gwp']['impact']
+        memory_impact, sig_mem = self.memory.impact_gwp()
         significant_figures = rd.min_significant_figures(
-            self.die_size, gpu_die_impact, gpu_impact)
-        return self.die_size * gpu_die_impact + gpu_impact, significant_figures
+            self.die_size, gpu_die_impact, gpu_impact, sig_mem)
+        return self.die_size * gpu_die_impact + gpu_impact + memory_impact, significant_figures
 
     def impact_pe(self) -> (float, int):
         gpu_die_impact = self._IMPACT_FACTOR_DICT['pe']['die_impact']
         gpu_impact = self._IMPACT_FACTOR_DICT['pe']['impact']
+        memory_impact, sig_mem = self.memory.impact_pe()
         significant_figures = rd.min_significant_figures(
-            self.die_size, gpu_die_impact, gpu_impact)
-        return self.die_size * gpu_die_impact + gpu_impact, significant_figures
+            self.die_size, gpu_die_impact, gpu_impact, sig_mem)
+        return self.die_size * gpu_die_impact + gpu_impact + memory_impact, significant_figures
 
     def impact_adp(self) -> (float, int):
         gpu_die_impact = self._IMPACT_FACTOR_DICT['adp']['die_impact']
         gpu_impact = self._IMPACT_FACTOR_DICT['adp']['impact']
+        memory_impact, sig_mem = self.memory.impact_adp()
         significant_figures = rd.min_significant_figures(
-            self.die_size, gpu_die_impact, gpu_impact)
-        return self.die_size * gpu_die_impact + gpu_impact, significant_figures
+            self.die_size, gpu_die_impact, gpu_impact, sig_mem)
+        return self.die_size * gpu_die_impact + gpu_impact + memory_impact, significant_figures
 
     def power_draw(self) -> (float, int):
         return self.tdp, rd.significant_number(self.tdp)

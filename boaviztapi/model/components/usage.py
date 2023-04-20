@@ -166,6 +166,7 @@ class UsageSetup(Usage):
     # idle mode : 887 kWh
     # production mode : 1310 kWh
     _DEFAULT_DYNAMIC_RATIO = 1310/(1310 - 887)
+    _DEFAULT_YEAR_USE_TIME = 0
 
     dynamic_impact_gwp: Optional[float] = None
     dynamic_impact_adp: Optional[float] = None

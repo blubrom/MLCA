@@ -1,5 +1,5 @@
 ,Watts,,,,year,nm,cm²,
-model,TDP,core_units,manufacturer,family,manufacture_date,process,die_size,source, comment
+model,TDP,core_units,manufacturer,family,manufacture_date,process,die_size,source,comment
 EPYC Embedded 9124,200,16,AMD,Genoa,2023,5,6.85,https://www.techpowerup.com/cpu-specs/epyc-embedded-9124.c3194,die size = 4*72 mm² (5nm) + 397 (6nm)
 EPYC Embedded 9254,200,24,AMD,Genoa,2023,5,6.85,https://www.techpowerup.com/cpu-specs/epyc-embedded-9254.c3193,die size = 4*72 mm² (5nm) + 397 (6nm)
 EPYC Embedded 9354,280,32,AMD,Genoa,2023,5,9.73,https://www.techpowerup.com/cpu-specs/epyc-embedded-9354.c3192,die size = 8*72 mm² (5nm) + 397 (6nm)
@@ -11,7 +11,7 @@ EPYC Embedded 9554P,360,64,AMD,Genoa,2023,5,9.73,https://www.techpowerup.com/cpu
 EPYC Embedded 9654,360,96,AMD,Genoa,2023,5,12.61,https://www.techpowerup.com/cpu-specs/epyc-embedded-9654.c3189,die size = 12*72 mm² (5nm) + 397 (6nm)
 EPYC Embedded 9654P,360,96,AMD,Genoa,2023,5,12.61,https://www.techpowerup.com/cpu-specs/epyc-embedded-9654p.c3198,die size = 12*72 mm² (5nm) + 397 (6nm)
 EPYC 7773X,280,64,AMD,Milan-X,2022,7,10.64,https://www.techpowerup.com/cpu-specs/epyc-7773x.c2759,die size = 8*81 mm² (7nm) + 416 (12nm)
-EPYC 7763,280,64,AMD, Milan,2021,7,10.64,https://www.techpowerup.com/cpu-specs/epyc-7763.c2373,die size = 8*81 mm² (7nm) + 416 (12nm)
+EPYC 7763,280,64,AMD,Milan,2021,7,10.64,https://www.techpowerup.com/cpu-specs/epyc-7763.c2373,die size = 8*81 mm² (7nm) + 416 (12nm)
 EPYC 7713P,225,64,AMD,Milan,2021,7,10.64,https://www.techpowerup.com/cpu-specs/epyc-7713p.c2375,die size = 8*81 mm² (7nm) + 416 (12nm)
 EPYC 7713,225,64,AMD,Milan,2021,7,10.64,https://www.techpowerup.com/cpu-specs/epyc-7713.c2374,die size = 8*81 mm² (7nm) + 416 (12nm)
 EPYC 7663,240,56,AMD,Milan,2021,7,10.64,https://www.techpowerup.com/cpu-specs/epyc-7663.c2376,die size = 8*81 mm² (7nm) + 416 (12nm)
@@ -142,34 +142,37 @@ Xeon w7-3455,270,24,Intel,Sapphire Rapids,2023,10,19.08,https://www.techpowerup.
 Xeon w7-3465X,300,28,Intel,Sapphire Rapids,2023,10,19.08,https://www.techpowerup.com/cpu-specs/xeon-w7-3465x.c3108,
 Xeon w9-3475X,300,36,Intel,Sapphire Rapids,2023,10,19.08,https://www.techpowerup.com/cpu-specs/xeon-w9-3475x.c3107,
 Xeon w9-3495X,350,56,Intel,Sapphire Rapids,2023,10,19.08,https://www.techpowerup.com/cpu-specs/xeon-w9-3495x.c3106,
+Xeon Gold 6148,150,20,Intel,Skylake,2017,14,6.94,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server) https://www.intel.fr/content/www/fr/fr/products/sku/120489/intel-xeon-gold-6148-processor-27-5m-cache-2-40-ghz/specifications.html,die size for XCC configuration
+Xeon E5-2620 v2,95,6,Intel,Sandy Bridge EP,2012,32,4.35,https://www.techpowerup.com/cpu-specs/xeon-e5-2620.c969
+Xeon E5-2620 v4,85,8,Intel,Broadwell,2016,14,2.4624,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)#Die_Stats https://ark.intel.com/content/www/fr/fr/ark/products/92986/intel-xeon-processor-e52620-v4-20m-cache-2-10-ghz.html,die size for LCC configuration
 
-
-,,28,Intel,Skylake,2017,14,6.94,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server), die size for XCC configuration
-,,24,Intel,Skylake,2017,14,6.94,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server), die size for XCC configuration
-,,22,Intel,Skylake,2017,14,6.94,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server), die size for XCC configuration
-,,20,Intel,Skylake,2017,14,6.94,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server), die size for XCC configuration
-,,18,Intel,Skylake,2017,14,4.85,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server), die size for HCC configuration
-,,16,Intel,Skylake,2017,14,4.85,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server), die size for HCC configuration
-,,14,Intel,Skylake,2017,14,4.85,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server), die size for HCC configuration
-,,12,Intel,Skylake,2017,14,4.85,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server), die size for HCC configuration
-,,10,Intel,Skylake,2017,14,3.25,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server), die size for LCC configuration
-,,8,Intel,Skylake,2017,14,3.25,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server), die size for LCC configuration
-,,6,Intel,Skylake,2017,14,3.25,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server), die size for LCC configuration
-,,4,Intel,Skylake,2017,14,3.25,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server), die size for LCC configuration
+,,28,Intel,Skylake,2017,14,6.94,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),die size for XCC configuration
+,,24,Intel,Skylake,2017,14,6.94,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),die size for XCC configuration
+,,22,Intel,Skylake,2017,14,6.94,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),die size for XCC configuration
+,,20,Intel,Skylake,2017,14,6.94,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),die size for XCC configuration
+,,18,Intel,Skylake,2017,14,4.85,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),die size for HCC configuration
+,,16,Intel,Skylake,2017,14,4.85,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),die size for HCC configuration
+,,14,Intel,Skylake,2017,14,4.85,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),die size for HCC configuration
+,,12,Intel,Skylake,2017,14,4.85,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),die size for HCC configuration
+,,10,Intel,Skylake,2017,14,3.25,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),die size for LCC configuration
+,,8,Intel,Skylake,2017,14,3.25,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),die size for LCC configuration
+,,6,Intel,Skylake,2017,14,3.25,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),die size for LCC configuration
+,,4,Intel,Skylake,2017,14,3.25,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),die size for LCC configuration
 ,,4,Intel,Coffee Lake,2017,14,1.26,https://en.wikichip.org/wiki/intel/microarchitectures/coffee_lake
 ,,6,Intel,Coffee Lake,2017,14,1.49,https://en.wikichip.org/wiki/intel/microarchitectures/coffee_lake
 ,,8,Intel,Coffee Lake,2017,14,1.74,https://en.wikichip.org/wiki/intel/microarchitectures/coffee_lakee
-,,24,Intel,Broadwell,2014,14,4.56,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)
-,,22,Intel,Broadwell,2014,14,4.56,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client))
-,,20,Intel,Broadwell,2014,14,4.56,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client))
-,,18,Intel,Broadwell,2014,14,4.56,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client))
-,,16,Intel,Broadwell,2014,14,4.56,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client))
-,,14,Intel,Broadwell,2014,14,3.06,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client))
-,,12,Intel,Broadwell,2014,14,3.06,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client))
-,,10,Intel,Broadwell,2014,14,2.46,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client))
-,,8,Intel,Broadwell,2014,14,2.46,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client))
-,,6,Intel,Broadwell,2014,14,2.46,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client))
-,,4,Intel,Broadwell,2014,14,1.82,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client))
+E7-8890 v4,165,24,Intel,Broadwell EP,2016,14,4.56,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client),XCC chose max TDP of 24 cores Broawell CPUs
+E5-2696 v4,150,22,Intel,Broadwell EP,2016,14,4.56,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)),XCC chose max TDP of 22 cores Broawell CPUs
+E5-2679 v4,200,20,Intel,Broadwell EP,2016,14,4.56,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)),XCC chose max TDP of 20 cores Broawell CPUs
+E5-2697 v4,145,18,Intel,Broadwell EP,2016,14,4.56,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)),XCC chose max TDP of 18 cores Broawell CPUs
+E5-2697A v4,145,16,Intel,Broadwell EP,2016,14,4.56,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)),XCC chose max TDP of all the 16 cores Broadwell CPUs
+E5-2690 v4,135,14,Intel,Broadwell EP,2016,14,3.06,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)),HCC chose max TDP of all the 14 cores Broadwell CPUs
+E5-2687W v4,160,12,Intel,Broadwell EP,2016,14,3.06,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)),HCC chose max TDP of all the 12 cores Broadwell CPUs
+Core i7-6950X,140,10,Intel,Broadwell E,2016,14,2.46,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)),LCC
+E5-1660 v4,140,8,Intel,Broadwell EP,2016,14,2.46,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)),LCC chose max TDP of all the 8 cores Broadwell CPUs
+E5-1650 v4,140,6,Intel,Broadwell EP,2016,14,2.46,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)),LCC chose max TDP of all the 6 cores Broadwell CPUs
+Core i7-5775C,65,4,Intel,Broadwell,2015,14,1.82,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)), LCC
+5Y31,4.5,2,Intel,Broadwell Y,2015,14,0.82,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)),chose one representant with average TDP
 ,,18,Intel,Haswell,2013,22,6.22,https://en.wikichip.org/wiki/intel/microarchitectures/haswell_(client)
 ,,16,Intel,Haswell,2013,22,6.22,https://en.wikichip.org/wiki/intel/microarchitectures/haswell_(client)
 ,,14,Intel,Haswell,2013,22,6.22,https://en.wikichip.org/wiki/intel/microarchitectures/haswell_(client)

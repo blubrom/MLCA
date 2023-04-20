@@ -1,0 +1,28 @@
+{
+  "server": {
+    "configuration": {
+      "cpu": {
+        "units": 2,
+        "model": "Xeon Gold 6148"
+      },
+      "ram": [
+        {
+          "units": 1,
+          "capacity": 32
+        }
+      ]
+    }
+  },
+  "gpu": {
+    "units": 4,
+    "model": "NVIDIA Tesla V100 PCIe 32 GB"
+  },
+  "psf": 1,
+  "nb_nodes": 1,
+  "cpu_usage_ratio": 1,
+  "usage": {
+    "minute_use_time": 118.04,
+    "usage_location": "FRA",
+    "gwp_factor": 39E-3
+  }
+}

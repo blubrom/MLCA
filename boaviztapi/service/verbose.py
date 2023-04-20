@@ -31,6 +31,28 @@ def verbose_setup(complete_setup: MLSetup, input_setup: MLSetup):
     adp_ram = usage_ram.impact_adp()
     adp_cpu = usage_cpu.impact_adp()
 
+    json_output["usage"] = verbose_component(
+        complete_setup.usage, input_setup.usage)
+
+    json_output["embodied impacts"] = {
+        'gwp': {
+            'server': rd.round_to_sigfig(*complete_setup.gwp_embodied_server),
+            'gpus': rd.round_to_sigfig(*complete_setup.gwp_embodied_gpus),
+            'unit': "kgCO2eq"
+        },
+
+        'pe': {
+            'server': rd.round_to_sigfig(*complete_setup.pe_embodied_server),
+            'gpus': rd.round_to_sigfig(*complete_setup.pe_embodied_gpus),
+            'unit': "MJ"
+        },
+        'adp': {
+            'server': rd.round_to_sigfig(*complete_setup.adp_embodied_server),
+            'gpus': rd.round_to_sigfig(*complete_setup.adp_embodied_gpus),
+            'unit': "kgSbeq"
+        }
+    }
+
     json_output["dynamic impacts"] = {
         'gwp': {
             'value': rd.round_to_sigfig(complete_setup.nb_nodes * complete_setup.usage.dynamic_impact_gwp[0], complete_setup.usage.dynamic_impact_gwp[1]),
@@ -129,12 +151,16 @@ def verbose_component(complete_component: Component, input_component: Component,
                 recursive_dict_verbose(value,
                                        {} if getattr(input_component, attr) is None else getattr(input_component, attr))
         elif value is not None and attr != "TYPE" and attr != "hash":
-            json_output[attr] = {}
-            json_output[attr]["input_value"] = getattr(
-                input_component, attr, None)
-            json_output[attr]["used_value"] = value
-            json_output[attr]["status"] = get_status(
-                json_output[attr]["used_value"], json_output[attr]["input_value"])
+            if complete_component.TYPE == "GPU" and attr == "memory":
+                json_output[attr] = verbose_component(
+                    complete_component=complete_component.memory, input_component=input_component.memory)
+            else:
+                json_output[attr] = {}
+                json_output[attr]["input_value"] = getattr(
+                    input_component, attr, None)
+                json_output[attr]["used_value"] = value
+                json_output[attr]["status"] = get_status(
+                    json_output[attr]["used_value"], json_output[attr]["input_value"])
 
     json_output["impacts"] = {"gwp": {
         "value": rd.round_to_sigfig(*complete_component.impact_gwp()),

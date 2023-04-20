@@ -104,10 +104,23 @@ curl -X 'POST' \
 #+end_src
 
 #+RESULTS:
-: {"impacts":{"gwp":{"manufacture":25.4,"use":"not implemented","unit":"kgCO2eq"},"pe":{"manufacture":375.0,"use":"not implemented","unit":"MJ"},"adp":{"manufacture":0.02,"use":"not implemented","unit":"kgSbeq"}},"verbose":{"units":1,"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},"memory":{"input_value":null,"used_value":{"hash":"1d674b295466533ec734e75dd37f1c46e74a3decf6c0d5e55ebd348d81a3c48c","TYPE":"RAM","capacity":80,"density":0.625,"process":null,"manufacturer":null,"manufacture_date":null,"model":null,"integrator":null},"status":"SET"},"impacts":{"gwp":{"value":25.4,"unit":"kgCO2eq"},"pe":{"value":375.0,"unit":"MJ"},"adp":{"value":0.02,"unit":"kgSbeq"}}}}
+: {"impacts":{"gwp":{"manufacture":300.0,"use":"not implemented","unit":"kgCO2eq"},"pe":{"manufacture":4000.0,"use":"not implemented","unit":"MJ"},"adp":{"manufacture":0.03,"use":"not implemented","unit":"kgSbeq"}},
+"verbose":{"units":1,"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA
+A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80
+GB","status":"UNCHANGED"},
+"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},
+"memory":{"capacity":{"input_value":null,"used_value":80,"status":"SET"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":290.0,"unit":"kgCO2eq"},"pe":{"value":3600.0,"unit":"MJ"},"adp":{"value":0.0098,"unit":"kgSbeq"}}},"impacts":{"gwp":{"value":300.0,"unit":"kgCO2eq"},"pe":{"value":4000.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}
+
+For the specific model used, the "NVIDIA A100 SMX4 80GB", we can see
+a manufacture impact of 300 kgCO_2 e. this impact is mainly influenced
+by the quantity of memory on the GPU with 290 kg CO_2 e.
+These are preliminary results since the base value for gpu impacts is
+not proporly set yet.
 
 ** Estimating the total impacts
 
+with all of the previous information, we can run the estimation with
+the following command : 
    #+begin_src shell :results output :exports both
 curl -X 'POST' \
   'http://localhost:5000/v1/mlca/?verbose=true' \
@@ -126,7 +139,7 @@ curl -X 'POST' \
       "ram": [
         {
           "units": 1,
-          "capacity": 0
+          "capacity": 518
         }
       ]
     }
@@ -149,12 +162,29 @@ curl -X 'POST' \
    #+end_src
 
    #+RESULTS:
-   : {"impacts":{"gwp":{"embodied":2300.0,"direct":77600.0,"total":80000.0,"unit":"kgCO2eq"},"pe":{"embodied":33000.0,"direct":15300000.0,"total":15000000.0,"unit":"MJ"},"adp":{"embodied":0.87,"direct":0.0658,"total":0.93,"unit":"kgSbeq"},"energy consumption":{"value":437000.0,"unit":"kWh"}},"perspective":{"relative_SNBC":{"value":40.0,"unit":"Emissions of X Person per year in the \"Stratégie Nationale Bas Carbone (SNBC)\" sustanability objectives for France"},"relative_PB_Climate_Change":{"value":81.0,"unit":"person in a scenario where the Planetary Boundary for Climate Change is not exceded"},"relative_PB_ADP":{"value":29.0,"unit":"person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded"}},"verbose":{"dynamic impacts":{"gwp":{"value":25100.0,"gpus":25000.0,"ram":93.0,"cpus":0.0,"unit":"kgCO2eq"},"pe":{"value":4940000.0,"gpus":4920000.0,"ram":18300.0,"cpus":0.0,"unit":"MJ"},"adp":{"value":0.0213,"gpus":0.0212,"ram":7.89e-05,"cpus":0.0,"unit":"kgSbeq"}},"manufacture of one server node":{"CPU-1":{"unit":2,"hash":"50cbc426060b04c31b0009f1fb833c7a257a8e5d130d51b4dba3f36bfb49bef2","die_size":{"input_value":null,"used_value":2.1,"status":"SET"},"model":{"input_value":"AMD Milan EPYC 7543","used_value":"AMD Milan EPYC 7543","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":65,"status":"SET"},"impacts":{"gwp":{"value":26.0,"unit":"kgCO2eq"},"pe":{"value":420.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":1,"hash":"5a3596943dcb1ce257c490fefabacf1ebb617a6d39ceaf3ee0cac15f2454aa80","capacity":{"input_value":0,"used_value":32,"status":"MODIFY"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":120.0,"unit":"kgCO2eq"},"pe":{"value":1500.0,"unit":"MJ"},"adp":{"value":0.0049,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"083dcd17f9997756af73de7c61f0cf2986b25075ad00bbf7c07e08cc80a2183f","case_type":{"input_value":"rack","used_value":"rack","status":"UNCHANGED"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"cb269039943b145f924c394acd2f665c10b23bddf954428af81bd8eccaff3d6a","capacity":{"input_value":null,"used_value":1000,"status":"SET"},"density":{"input_value":null,"used_value":48.5,"status":"SET"},"impacts":{"gwp":{"value":52.0,"unit":"kgCO2eq"},"pe":{"value":640.0,"unit":"MJ"},"adp":{"value":0.0019,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"be84aabaaac41126e1bd93ec3c10b355c6c7534cf9e3d7337cef9d6d0bb116c6","unit_weight":{"input_value":null,"used_value":2.99,"status":"SET"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}}},"manufacture of one gpu":{"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},"memory":{"input_value":null,"used_value":{"hash":"1d674b295466533ec734e75dd37f1c46e74a3decf6c0d5e55ebd348d81a3c48c","TYPE":"RAM","capacity":80,"density":0.625,"process":null,"manufacturer":null,"manufacture_date":null,"model":null,"integrator":null},"status":"SET"},"impacts":{"gwp":{"value":25.4,"unit":"kgCO2eq"},"pe":{"value":375.0,"unit":"MJ"},"adp":{"value":0.02,"unit":"kgSbeq"}}}}}
+   : {"impacts":{"gwp":{"embodied":10000.0,"direct":82000.0,"total":100000.0,"unit":"kgCO2eq"},"pe":{"embodied":200000.0,"direct":16200000.0,"total":20000000.0,"unit":"MJ"},"adp":{"embodied":1.0,"direct":0.0696,"total":1.0,"unit":"kgSbeq"},"energy consumption":{"value":462000.0,"unit":"kWh"}},"perspective":{"relative_SNBC":{"value":50.0,"unit":"Emissions of X Person per year in the \"Stratégie Nationale Bas Carbone (SNBC)\" sustanability objectives for France"},"relative_PB_Climate_Change":{"value":100.0,"unit":"person in a scenario where the Planetary Boundary for Climate Change is not exceded"},"relative_PB_ADP":{"value":40.0,"unit":"person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded"}},"verbose":{"embodied impacts":{"gwp":{"server":6900.0,"gpus":8000.0,"unit":"kgCO2eq"},"pe":{"server":88000.0,"gpus":100000.0,"unit":"MJ"},"adp":{"server":0.52,"gpus":0.7,"unit":"kgSbeq"}},"dynamic impacts":{"gwp":{"value":26500.0,"gpus":25000.0,"ram":1510.0,"cpus":0.0,"unit":"kgCO2eq"},"pe":{"value":5220000.0,"gpus":4920000.0,"ram":297000.0,"cpus":0.0,"unit":"MJ"},"adp":{"value":0.0225,"gpus":0.0212,"ram":0.00128,"cpus":0.0,"unit":"kgSbeq"}},"manufacture of one server node":{"CPU-1":{"unit":2,"hash":"50cbc426060b04c31b0009f1fb833c7a257a8e5d130d51b4dba3f36bfb49bef2","die_size":{"input_value":null,"used_value":2.1,"status":"SET"},"model":{"input_value":"AMD Milan EPYC 7543","used_value":"AMD Milan EPYC 7543","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":65,"status":"SET"},"impacts":{"gwp":{"value":26.0,"unit":"kgCO2eq"},"pe":{"value":420.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":1,"hash":"47c27f3005e66f4e9e37a37249fc33b8fc7abd50335b06a7fd8b3bfd089c60b8","capacity":{"input_value":518,"used_value":518,"status":"UNCHANGED"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":1800.0,"unit":"kgCO2eq"},"pe":{"value":23000.0,"unit":"MJ"},"adp":{"value":0.054,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"083dcd17f9997756af73de7c61f0cf2986b25075ad00bbf7c07e08cc80a2183f","case_type":{"input_value":"rack","used_value":"rack","status":"UNCHANGED"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"cb269039943b145f924c394acd2f665c10b23bddf954428af81bd8eccaff3d6a","capacity":{"input_value":null,"used_value":1000,"status":"SET"},"density":{"input_value":null,"used_value":48.5,"status":"SET"},"impacts":{"gwp":{"value":52.0,"unit":"kgCO2eq"},"pe":{"value":640.0,"unit":"MJ"},"adp":{"value":0.0019,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"be84aabaaac41126e1bd93ec3c10b355c6c7534cf9e3d7337cef9d6d0bb116c6","unit_weight":{"input_value":null,"used_value":2.99,"status":"SET"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}}},"manufacture of one gpu":{"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},"memory":{"input_value":null,"used_value":{"hash":"1d674b295466533ec734e75dd37f1c46e74a3decf6c0d5e55ebd348d81a3c48c","TYPE":"RAM","capacity":80,"density":0.625,"process":null,"manufacturer":null,"manufacture_date":null,"model":null,"integrator":null},"status":"SET"},"impacts":{"gwp":{"value":300.0,"unit":"kgCO2eq"},"pe":{"value":4000.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}}
 
+
+we can see in the results that we obtain close figures to those in the
+paper.
+with embodied impacts of 6.9T CO_2 e for the servers and 8T for the
+GPUs to compare with the 7.6T for the servers and 3.6 T for the GPUs
+in the paper. Most of the difference is due to estimated impacts of
+300 kgCO_2 e for one GPU while it was estimated to 125 kgCO_2 e in the
+paper.
+
+For the dynamic consumption, we obtain an estimate of 26.5T CO_2 e,
+mainly due to the GPUs (accountable for 25T, the only difference with
+the figure obtained in the paper being the slightly off conversion
+from real time to GPU hours) while the memory, not accounted for in
+the paper brings another 1.5T CO_2 e.
+
+The only thing that differs greatly is the value for the idle
+consumption. (not so surprising since figures differ quite a lot).
 
 * replicating results from [Bannour2021evaluating]
 
-the facility setup is the [[https://doc.lab-ia.fr/][LaBia]].we can see that the only nodes using a
+the facility setup is the [[https://doc.lab-ia.fr/][LaBia]]. We can see that the only nodes using a
 20 core CPU are: n[101-102]:
 
 -  2 x Intel Xeon Gold 6148 20 cores / 40 threads @ 2.4 GHz (Skylake)
@@ -164,6 +194,31 @@ the facility setup is the [[https://doc.lab-ia.fr/][LaBia]].we can see that the 
 using 32 GB of RAM and not the full 384.
 
 while the lab server is using one GTX 1080 Ti with 11GB of memory.
+
+while we do not have the Intel Xeon Gold 6148 in our CPU database, we
+can see on [[https://www.intel.fr/content/www/fr/fr/products/sku/120489/intel-xeon-gold-6148-processor-27-5m-cache-2-40-ghz/specifications.html][Intel's website]] that it has a TDP of 150W, was realeased in
+2017 with a process of 14nm with the Skylake architecture, this is
+sufficient information to add one entry to our database, knowing the
+information about the Skylake architecture from [[https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server)][WikiChips]]. 
+
+An NVIDIA Tesla V100 as a TDP of 250W, therefore, if used for 2 hours,
+we would expect an energy consumption of 500Wh 
+
+However, in the paper, this consumption is estimated at a little more
+than 1kWh + 32*.37W * 2 = 23Wh for the memory
+
+#+begin_src python :results output :exports both
+print(32*.37)
+print((500 + 11.84) * 118/60) 
+#+end_src
+
+#+RESULTS:
+: 11.84
+: 1006.6186666666666
+
+We can see that If we were to assume the usage of two GPUs, we would
+obtain an estimate of 1.006 kWh, that is close to the 1.03kWh
+estimated for French Press on the Facility
 
 #+begin_src python :results output :exports both
 import subprocess
@@ -208,3 +263,41 @@ print(s.stdout)
 #+end_src
 
 #+RESULTS:
+
+
+#+begin_src shell :results output :exports both
+curl -X 'POST' \
+  'http://localhost:5000/v1/mlca/?verbose=true' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "server": {
+    "configuration": {
+      "cpu": {
+        "units": 2,
+        "model": "Xeon Gold 6148"
+      },
+      "ram": [
+        {
+          "units": 1,
+          "capacity": 32
+        }
+      ]
+    }
+  },
+  "gpu": {
+    "units": 4,
+    "model": "NVIDIA Tesla V100 PCIe 32 GB"
+  },
+  "psf": 1,
+  "nb_nodes": 1,
+  "cpu_usage_ratio": 0,
+  "usage": {
+    "minute_use_time": 118.04,
+    "usage_location": "FRA",
+    "gwp_factor": 39E-3
+  }
+}'
+#+end_src
+
+: #+RESULTS:{"impacts":{"gwp":{"embodied":0.05,"direct":0.24,"total":0.3,"unit":"kgCO2eq"},"pe":{"embodied":0.7,"direct":69.6,"total":70.0,"unit":"MJ"},"adp":{"embodied":1e-05,"direct":3e-07,"total":1e-05,"unit":"kgSbeq"},"energy consumption":{"value":1.99,"unit":"kWh"}},"perspective":{"relative_SNBC":{"value":0.0001,"unit":"Emissions of X Person per year in the \"Stratégie Nationale Bas Carbone (SNBC)\" sustanability objectives for France"},"relative_PB_Climate_Change":{"value":0.0003,"unit":"person in a scenario where the Planetary Boundary for Climate Change is not exceded"},"relative_PB_ADP":{"value":0.0003,"unit":"person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded"}},"verbose":{"usage":{"years_use_time":{"input_value":null,"used_value":0,"status":"SET"},"hours_electrical_consumption":{"input_value":null,"used_value":1.01192,"status":"SET"},"usage_location":{"input_value":"FRA","used_value":"FRA","status":"UNCHANGED"},"gwp_factor":{"input_value":0.039,"used_value":0.039,"status":"UNCHANGED"},"pe_factor":{"input_value":null,"used_value":11.289,"status":"SET"},"adp_factor":{"input_value":null,"used_value":4.86e-08,"status":"SET"},"dynamic_ratio":{"input_value":null,"used_value":3.0969267139479904,"status":"SET"},"minute_use_time":{"input_value":118.04,"used_value":118.04,"status":"UNCHANGED"},"dynamic_impact_gwp":{"input_value":null,"used_value":[0.07764057392,3],"status":"SET"},"dynamic_impact_adp":{"input_value":null,"used_value":[9.6752099808e-08,3],"status":"SET"},"dynamic_impact_pe":{"input_value":null,"used_value":[22.47395997392,3],"status":"SET"},"impacts":{"gwp":{"value":0.24,"unit":"kgCO2eq"},"pe":{"value":69.6,"unit":"MJ"},"adp":{"value":3e-07,"unit":"kgSbeq"}}},"embodied impacts":{"gwp":{"server":0.026,"gpus":0.03,"unit":"kgCO2eq"},"pe":{"server":0.35,"gpus":0.3,"unit":"MJ"},"adp":{"server":5.3e-06,"gpus":4e-06,"unit":"kgSbeq"}},"dynamic impacts":{"gwp":{"value":0.0776,"gpus":0.0767,"ram":0.000915,"cpus":0.0,"unit":"kgCO2eq"},"pe":{"value":22.5,"gpus":22.2,"ram":0.265,"cpus":0.0,"unit":"MJ"},"adp":{"value":9.68e-08,"gpus":9.56e-08,"ram":1.14e-09,"cpus":0.0,"unit":"kgSbeq"}},"manufacture of one server node":{"CPU-1":{"unit":2,"hash":"e9fb3b5d6c10d5704f77b5ceb8b83db4da55d51793389f5c5d1ac968decb6146","die_size":{"input_value":null,"used_value":6.94,"status":"SET"},"model":{"input_value":"Xeon Gold 6148","used_value":"Xeon Gold 6148","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":150,"status":"SET"},"impacts":{"gwp":{"value":45.6,"unit":"kgCO2eq"},"pe":{"value":680.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":1,"hash":"a34b138e4ee0b4c832576fe84c3ef50c4e9713ab83fe8269fdc4dbacfd382efb","capacity":{"input_value":32,"used_value":32,"status":"UNCHANGED"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":120.0,"unit":"kgCO2eq"},"pe":{"value":1500.0,"unit":"MJ"},"adp":{"value":0.0049,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"cb269039943b145f924c394acd2f665c10b23bddf954428af81bd8eccaff3d6a","capacity":{"input_value":null,"used_value":1000,"status":"SET"},"density":{"input_value":null,"used_value":48.5,"status":"SET"},"impacts":{"gwp":{"value":52.0,"unit":"kgCO2eq"},"pe":{"value":640.0,"unit":"MJ"},"adp":{"value":0.0019,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"be84aabaaac41126e1bd93ec3c10b355c6c7534cf9e3d7337cef9d6d0bb116c6","unit_weight":{"input_value":null,"used_value":2.99,"status":"SET"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"d510a031d97870b128df7e34c32ed8264c7ac8f1786f012cce7f6dbf2a6ffebf","case_type":{"input_value":null,"used_value":"rack","status":"SET"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}}},"manufacture of one gpu":{"die_size":{"input_value":null,"used_value":8.15,"status":"SET"},"model":{"input_value":"NVIDIA Tesla V100 PCIe 32 GB","used_value":"NVIDIA Tesla V100 PCIe 32 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":250,"status":"SET"},"memory_size":{"input_value":null,"used_value":32,"status":"SET"},"memory":{"capacity":{"input_value":null,"used_value":32,"status":"SET"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":120.0,"unit":"kgCO2eq"},"pe":{"value":1500.0,"unit":"MJ"},"adp":{"value":0.0049,"unit":"kgSbeq"}}},"impacts":{"gwp":{"value":100.0,"unit":"kgCO2eq"},"pe":{"value":2000.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}}

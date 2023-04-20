@@ -33,6 +33,12 @@ class MLSetup(BaseModel):
     average_usage: float = None
     hardware_replacement_rate: float = None
 
+    gwp_embodied_server: Optional[float] = None
+    pe_embodied_server: Optional[float] = None
+    adp_embodied_server: Optional[float] = None
+    gwp_embodied_gpus: Optional[float] = None
+    pe_embodied_gpus: Optional[float] = None
+    adp_embodied_gpus: Optional[float] = None
     # figures from Luccioni et al. (2022)
     # "Estimating the carbon footprint of Bloom, a 176B parameter Language Model"
     # https://doi.org/10.48550/ARXIV.2211.02001
@@ -49,34 +55,51 @@ class MLSetup(BaseModel):
         return manufacture_impact / (self.hardware_replacement_rate * 365 * 24 * self.average_usage)
 
     def embodied_impact_gwp(self) -> (float, int):
-        manufacture_gpu = [g.impact_gwp() for g in self.gpus]
+        manufacture_gpu_list = list(zip(*[g.impact_gwp() for g in self.gpus]))
+        manufacture_gpu, sig_gpu = sum(
+            manufacture_gpu_list[0]), min(manufacture_gpu_list[1])
         manufacture_server = self.server.impact_manufacture_gwp()
-        sum_impacts_manufacture, significant_figure_manufacture = functools.reduce(
-            (lambda acc, i: (acc[0] + i[0], min(acc[1], i[1]))), manufacture_gpu, manufacture_server)
+        sum_impacts_manufacture, significant_figure_manufacture = manufacture_gpu + \
+            manufacture_server[0], min(sig_gpu, manufacture_server[1])
         embodied = self.usage.get_duration_hours() * \
             self.embodied_impact_hour(sum_impacts_manufacture)
+        self.gwp_embodied_server = self.nb_nodes * self.usage.get_duration_hours() * \
+            self.embodied_impact_hour(
+                manufacture_server[0]), manufacture_server[1]
+        self.gwp_embodied_gpus = self.nb_nodes * self.usage.get_duration_hours() * \
+            self.embodied_impact_hour(manufacture_gpu), sig_gpu
         return self.nb_nodes * embodied, significant_figure_manufacture
 
     def embodied_impact_pe(self) -> (float, int):
-        manufacture_gpu = [g.impact_pe() for g in self.gpus]
+        manufacture_gpu_list = list(zip(*[g.impact_pe() for g in self.gpus]))
+        manufacture_gpu, sig_gpu = sum(
+            manufacture_gpu_list[0]), min(manufacture_gpu_list[1])
         manufacture_server = self.server.impact_manufacture_pe()
-        sum_impacts_manufacture = manufacture_server[0] + \
-            sum(item[0] for item in manufacture_gpu)
-        significant_figure_manufacture = min(
-            [manufacture_server[1]] + [item[1] for item in manufacture_gpu])
+        sum_impacts_manufacture, significant_figure_manufacture = manufacture_gpu + \
+            manufacture_server[0], min(sig_gpu, manufacture_server[1])
         embodied = self.usage.get_duration_hours() * \
             self.embodied_impact_hour(sum_impacts_manufacture)
+        self.pe_embodied_server = self.nb_nodes * self.usage.get_duration_hours() * \
+            self.embodied_impact_hour(
+                manufacture_server[0]), manufacture_server[1]
+        self.pe_embodied_gpus = self.nb_nodes * self.usage.get_duration_hours() * \
+            self.embodied_impact_hour(manufacture_gpu), sig_gpu
         return self.nb_nodes * embodied, significant_figure_manufacture
 
     def embodied_impact_adp(self) -> (float, int):
-        manufacture_gpu = [g.impact_adp() for g in self.gpus]
+        manufacture_gpu_list = list(zip(*[g.impact_adp() for g in self.gpus]))
+        manufacture_gpu, sig_gpu = sum(
+            manufacture_gpu_list[0]), min(manufacture_gpu_list[1])
         manufacture_server = self.server.impact_manufacture_adp()
-        sum_impacts_manufacture = manufacture_server[0] + \
-            sum(item[0] for item in manufacture_gpu)
-        significant_figure_manufacture = min(
-            [manufacture_server[1]] + [item[1] for item in manufacture_gpu])
+        sum_impacts_manufacture, significant_figure_manufacture = manufacture_gpu + \
+            manufacture_server[0], min(sig_gpu, manufacture_server[1])
         embodied = self.usage.get_duration_hours() * \
             self.embodied_impact_hour(sum_impacts_manufacture)
+        self.adp_embodied_server = self.nb_nodes * self.usage.get_duration_hours() * \
+            self.embodied_impact_hour(
+                manufacture_server[0]), manufacture_server[1]
+        self.adp_embodied_gpus = self.nb_nodes * self.usage.get_duration_hours() * \
+            self.embodied_impact_hour(manufacture_gpu), sig_gpu
         return self.nb_nodes * embodied, significant_figure_manufacture
 
     def dynamic_power(self) -> (float, int):
