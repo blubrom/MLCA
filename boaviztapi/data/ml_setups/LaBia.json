@@ -13,10 +13,12 @@
       ]
     }
   },
-  "gpu": {
-    "units": 4,
-    "model": "NVIDIA Tesla V100 PCIe 32 GB"
-  },
+ "gpu": [
+    {
+      "units": 4,
+      "model": "NVIDIA Tesla V100 PCIe 32 GB"
+    }
+  ],
   "psf": 1,
   "nb_nodes": 1,
   "cpu_usage_ratio": 1,

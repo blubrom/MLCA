@@ -11,7 +11,7 @@ from boaviztapi.model.components.usage import UsageSetup
 class MLSetupDTO(BaseModel):
     nb_nodes: Optional[int] = None
     server: Optional[ServerDTO] = None
-    gpu: Optional[Gpu] = None
+    gpu: Optional[List[Gpu]] = None
     psf: Optional[float] = None
     usage: Optional[UsageSetup] = None
     gpu_usage_ratio: Optional[float] = None
@@ -27,8 +27,11 @@ class MLSetupDTO(BaseModel):
         if self.server:
             setup.server = self.server.to_device()
         if self.gpu:
-            setup.gpus = [ComponentGPU(**self.gpu.dict())
-                          for _ in range(self.gpu.units)]
+            list_gpus = []
+            for g in self.gpu:
+                list_gpus += [ComponentGPU(**g.dict())
+                          for _ in range(g.units)]
+            setup.gpus = list_gpus
         setup.psf = self.psf
         setup.average_usage = self.average_usage
         setup.hardware_replacement_rate = self.hardware_replacement_rate

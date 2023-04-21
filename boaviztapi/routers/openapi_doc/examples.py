@@ -129,10 +129,10 @@ ml_setup_example = {
             ],
         }
     },
-    "gpu": {
+    "gpu": [{
         "units": 1,
         "model": "NVIDIA GeForce GTX 1080 Ti"
-    },
+    }],
     "usage": {
         "hours_use_time": 12,
         "gwp_factor": 51.28,

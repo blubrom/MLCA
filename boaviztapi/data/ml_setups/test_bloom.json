@@ -16,10 +16,12 @@
       ]
     }
   },
-  "gpu": {
-    "units": 8,
-    "model": "NVIDIA A100 SXM4 80 GB"
-  },
+  "gpu": [
+    {
+      "units": 8,
+      "model": "NVIDIA A100 SXM4 80 GB"
+    }
+  ],
   "psf": 1,
   "nb_nodes": 48,
   "cpu_usage_ratio": 0,
