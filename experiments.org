@@ -5,6 +5,53 @@ first, run the program, we will then be able to send it requests
 pipenv run uvicorn boaviztapi.main:app --host=localhost --port 5000 &
 #+end_src
 
+
+* Defining some helper functions to easily run experiments and read their results
+
+then, we define a helper function to be able to more easily run
+experiments and store their results in a more readable way
+#+begin_src python :results output :exports both :session
+import json
+import subprocess
+from datetime import datetime
+
+def run_experiment(model, filename):
+  with open("tmp.json", "w") as tmp:
+    json.dump(model, tmp)
+  path = "results/" + datetime.now().strftime("%d-%m-%y_%H-%M") + "_" + filename
+  with open(path, "w") as out:
+    request = "curl -X 'POST' 'http://localhost:5000/v1/mlca/?verbose=true' -H 'accept: aplication/json' -H 'Content-Type: application/json' -d @tmp.json"
+    results = subprocess.run(request, shell=True, check=True, capture_output=True, text=True)
+    output = json.JSONDecoder().decode(results.stdout)
+    impacts = output["impacts"]
+    perspective = output["perspective"]
+    print(f"estimated impacts: {impacts}")
+    print(f"to put impacts in perspective: {perspective}")
+    json.dump(output, out, indent=4, ensure_ascii=True)
+    subprocess.run("rm tmp.json", shell=True)
+    return output
+#+end_src
+
+#+RESULTS:
+
+Full results are put into the results repository under a name that is
+prefixed with the date-time of running the experiment.
+
+As most of the comparisons we are able to make are refering to gwp and
+dynamic energy consumption only, let us also define a helper function
+to print those results.
+
+#+begin_src python :results output :exports both :session
+def print_gwp_and_energy(results):
+    dynamic_energy = results["impacts"]["energy consumption"]
+    dynamic_gwp = results["impacts"]["gwp"]
+    print(f"energy consumption: {dynamic_energy}")
+    print(f"dynamic impacts gwp: {dynamic_gwp}")
+#+end_src
+
+#+RESULTS:
+
+
 * Checking that we can get the same dynamic consumption estimate as Green Algorithms
 
 To do a first sanity check, we verifiy that we are able to reproduce
@@ -26,45 +73,19 @@ exact setup and results but it seems like GA is kind of broken right
 now).
 
 If we now run the experiment with our tool :
+#+begin_src python :results output :exports both :session
+with open("boaviztapi/data/ml_setups/test_equals_ga.json", 'r') as test_ga:
+    model_ga = json.load(test_ga)
+results = run_experiment(model_ga, "test_equals_ga.json")
 
-#+begin_src shell :results output :exports both
-curl -X 'POST' \
-  'http://localhost:5000/v1/mlca/?verbose=false' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "server": {
-    "configuration": {
-      "cpu": {
-        "units": 1,
-        "model": "A8-7680"
-      },
-      "ram": [
-        {
-          "units": 1,
-          "capacity": 64,
-          "density": 1.79
-        }
-      ]
-    }
-  },
-  "gpu": [
-    {
-      "units": 1,
-      "model": "NVIDIA GeForce GTX 1080 Ti"
-    }
-  ],
-  "usage": {
-    "hours_use_time": 12,
-    "gwp_factor": 51.28E-3,
-    "dynamic_ratio": 1
-  }
-}'
+print_gwp_and_energy(results)
 #+end_src
 
 #+RESULTS:
-: {"impacts":{"gwp":{"embodied":0.2,"direct":0.196,"total":0.4,"unit":"kgCO2eq"},"pe":{"embodied":2.0,"direct":49.3,"total":50.0,"unit":"MJ"},"adp":{"embodied":3e-05,"direct":2.46e-07,"total":3e-05,"unit":"kgSbeq"},
-"energy consumption":{"value":3.83,"unit":"kWh"}},"perspective":{"relative_SNBC":{"value":0.0002,"unit":"Emissions of X Person per year in the \"Stratégie Nationale Bas Carbone (SNBC)\" sustanability objectives for France"},"relative_PB_Climate_Change":{"value":0.0004,"unit":"person in a scenario where the Planetary Boundary for Climate Change is not exceded"},"relative_PB_ADP":{"value":0.001,"unit":"person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded"}}}
+: estimated impacts: {'gwp': {'embodied': 0.2, 'direct': 0.196, 'total': 0.4, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 3.0, 'direct': 49.3, 'total': 50.0, 'unit': 'MJ'}, 'adp': {'embodied': 3e-05, 'direct': 2.46e-07, 'total': 3e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 3.83, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 0.0002, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.0004, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.001, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: energy consumption: {'value': 3.83, 'unit': 'kWh'}
+: dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.196, 'total': 0.4, 'unit': 'kgCO2eq'}
 
 we see that we indeed obtain the same results of 196g CO_2 e and 3.83
 kWh of dynamic energy consumption.
@@ -183,57 +204,25 @@ not proporly set yet.
 
 ** Estimating the total impacts
 
-with all of the previous information, we can run the estimation with
-the following command : 
-   #+begin_src shell :results output :exports both
-curl -X 'POST' \
-  'http://localhost:5000/v1/mlca/?verbose=true' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "server": {
-    "model": {
-      "type": "rack"
-    },
-    "configuration": {
-      "cpu": {
-        "units": 2,
-        "model": "AMD Milan EPYC 7543"
-      },
-      "ram": [
-        {
-          "units": 1,
-          "capacity": 518
-        }
-      ]
-    }
-  },
-  "gpu": [
-    {
-      "units": 8,
-      "model": "NVIDIA A100 SXM4 80 GB"
-    }
-  ],
-  "psf": 1,
-  "nb_nodes": 48,
-  "cpu_usage_ratio": 0,
-  "usage": {
-    "days_use_time": 118,
-    "hours_use_time": 5,
-    "minute_use_time": 41,
-    "usage_location": "FRA",
-    "gwp_factor": 57.3E-3
-  }
-}'
-   #+end_src
+with all of the previous information, we can run the estimation
 
-   #+RESULTS:
-   : {"impacts":{"gwp":{"embodied":10000.0,"direct":82000.0,"total":100000.0,"unit":"kgCO2eq"},"pe":{"embodied":200000.0,"direct":16200000.0,"total":20000000.0,"unit":"MJ"},"adp":{"embodied":1.0,"direct":0.0696,"total":1.0,"unit":"kgSbeq"},"energy consumption":{"value":462000.0,"unit":"kWh"}},"perspective":{"relative_SNBC":{"value":50.0,"unit":"Emissions of X Person per year in the \"Stratégie Nationale Bas Carbone (SNBC)\" sustanability objectives for France"},"relative_PB_Climate_Change":{"value":100.0,"unit":"person in a scenario where the Planetary Boundary for Climate Change is not exceded"},"relative_PB_ADP":{"value":40.0,"unit":"person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded"}},"verbose":{"usage":{"days_use_time":{"input_value":118.0,"used_value":118.0,"status":"UNCHANGED"},"hours_use_time":{"input_value":5.0,"used_value":5.0,"status":"UNCHANGED"},"hours_electrical_consumption":{"input_value":null,"used_value":3.3929549999999997,"status":"SET"},"usage_location":{"input_value":"FRA","used_value":"FRA","status":"UNCHANGED"},"gwp_factor":{"input_value":0.0573,"used_value":0.0573,"status":"UNCHANGED"},"pe_factor":{"input_value":null,"used_value":11.289,"status":"SET"},"adp_factor":{"input_value":null,"used_value":4.86e-08,"status":"SET"},"dynamic_ratio":{"input_value":null,"used_value":3.0969267139479904,"status":"SET"},"minute_use_time":{"input_value":41.0,"used_value":41.0,"status":"UNCHANGED"},"dynamic_impact_gwp":{"input_value":null,"used_value":[551.6919552485249,3],"status":"SET"},"dynamic_impact_adp":{"input_value":null,"used_value":[0.00046792720811654996,3],"status":"SET"},"dynamic_impact_pe":{"input_value":null,"used_value":[108691.98050262824,3],"status":"SET"},"impacts":{"gwp":{"value":1710.0,"unit":"kgCO2eq"},"pe":{"value":337000.0,"unit":"MJ"},"adp":{"value":0.00145,"unit":"kgSbeq"}}},"embodied impacts":{"gwp":{"server":6900.0,"gpus":8000.0,"unit":"kgCO2eq"},"pe":{"server":88000.0,"gpus":100000.0,"unit":"MJ"},"adp":{"server":0.52,"gpus":0.7,"unit":"kgSbeq"}},"dynamic impacts":{"gwp":{"value":26500.0,"gpus":25000.0,"ram":1510.0,"cpus":0.0,"unit":"kgCO2eq"},"pe":{"value":5220000.0,"gpus":4920000.0,"ram":297000.0,"cpus":0.0,"unit":"MJ"},"adp":{"value":0.0225,"gpus":0.0212,"ram":0.00128,"cpus":0.0,"unit":"kgSbeq"}},"manufacture of one server node":{"CPU-1":{"unit":2,"hash":"50cbc426060b04c31b0009f1fb833c7a257a8e5d130d51b4dba3f36bfb49bef2","die_size":{"input_value":null,"used_value":2.1,"status":"SET"},"model":{"input_value":"AMD Milan EPYC 7543","used_value":"AMD Milan EPYC 7543","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":65,"status":"SET"},"impacts":{"gwp":{"value":26.0,"unit":"kgCO2eq"},"pe":{"value":420.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":1,"hash":"47c27f3005e66f4e9e37a37249fc33b8fc7abd50335b06a7fd8b3bfd089c60b8","capacity":{"input_value":518,"used_value":518,"status":"UNCHANGED"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":1800.0,"unit":"kgCO2eq"},"pe":{"value":23000.0,"unit":"MJ"},"adp":{"value":0.054,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"083dcd17f9997756af73de7c61f0cf2986b25075ad00bbf7c07e08cc80a2183f","case_type":{"input_value":"rack","used_value":"rack","status":"UNCHANGED"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"cb269039943b145f924c394acd2f665c10b23bddf954428af81bd8eccaff3d6a","capacity":{"input_value":null,"used_value":1000,"status":"SET"},"density":{"input_value":null,"used_value":48.5,"status":"SET"},"impacts":{"gwp":{"value":52.0,"unit":"kgCO2eq"},"pe":{"value":640.0,"unit":"MJ"},"adp":{"value":0.0019,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"be84aabaaac41126e1bd93ec3c10b355c6c7534cf9e3d7337cef9d6d0bb116c6","unit_weight":{"input_value":null,"used_value":2.99,"status":"SET"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}}},"manufacture of one gpu":{"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},"memory":{"capacity":{"input_value":null,"used_value":80,"status":"SET"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":290.0,"unit":"kgCO2eq"},"pe":{"value":3600.0,"unit":"MJ"},"adp":{"value":0.0098,"unit":"kgSbeq"}}},"impacts":{"gwp":{"value":300.0,"unit":"kgCO2eq"},"pe":{"value":4000.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}}
+#+begin_src python :results output :exports both :session
+with open("boaviztapi/data/ml_setups/test_bloom.json",'r') as bloom:
+    bloom_model = json.load(bloom)
+out = run_experiment(bloom_model,"bloom.json")
+embodied = out["verbose"]["embodied impacts"]["gwp"]
+dynamic = out["verbose"]["dynamic impacts"]["gwp"]
+print(f"embodied impacts gwp: {embodied}")
+print(f"dynamic impacts gwp: {dynamic}")
+#+end_src
 
- {"impacts":{"gwp":{"embodied":10000.0,"direct":82000.0,"total":100000.0,"unit":"kgCO2eq"},"pe":{"embodied":200000.0,"direct":16200000.0,"total":20000000.0,"unit":"MJ"},"adp":{"embodied":1.0,"direct":0.0696,"total":1.0,"unit":"kgSbeq"},"energy consumption":{"value":462000.0,"unit":"kWh"}},"perspective":{"relative_SNBC":{"value":50.0,"unit":"Emissions of X Person per year in the \"Stratégie Nationale Bas Carbone (SNBC)\" sustanability objectives for France"},"relative_PB_Climate_Change":{"value":100.0,"unit":"person in a scenario where the Planetary Boundary for Climate Change is not exceded"},"relative_PB_ADP":{"value":40.0,"unit":"person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded"}},"verbose":{"embodied impacts":{"gwp":{"server":6900.0,"gpus":8000.0,"unit":"kgCO2eq"},"pe":{"server":88000.0,"gpus":100000.0,"unit":"MJ"},"adp":{"server":0.52,"gpus":0.7,"unit":"kgSbeq"}},"dynamic impacts":{"gwp":{"value":26500.0,"gpus":25000.0,"ram":1510.0,"cpus":0.0,"unit":"kgCO2eq"},"pe":{"value":5220000.0,"gpus":4920000.0,"ram":297000.0,"cpus":0.0,"unit":"MJ"},"adp":{"value":0.0225,"gpus":0.0212,"ram":0.00128,"cpus":0.0,"unit":"kgSbeq"}},"manufacture of one server node":{"CPU-1":{"unit":2,"hash":"50cbc426060b04c31b0009f1fb833c7a257a8e5d130d51b4dba3f36bfb49bef2","die_size":{"input_value":null,"used_value":2.1,"status":"SET"},"model":{"input_value":"AMD Milan EPYC 7543","used_value":"AMD Milan EPYC 7543","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":65,"status":"SET"},"impacts":{"gwp":{"value":26.0,"unit":"kgCO2eq"},"pe":{"value":420.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":1,"hash":"47c27f3005e66f4e9e37a37249fc33b8fc7abd50335b06a7fd8b3bfd089c60b8","capacity":{"input_value":518,"used_value":518,"status":"UNCHANGED"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":1800.0,"unit":"kgCO2eq"},"pe":{"value":23000.0,"unit":"MJ"},"adp":{"value":0.054,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"083dcd17f9997756af73de7c61f0cf2986b25075ad00bbf7c07e08cc80a2183f","case_type":{"input_value":"rack","used_value":"rack","status":"UNCHANGED"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"cb269039943b145f924c394acd2f665c10b23bddf954428af81bd8eccaff3d6a","capacity":{"input_value":null,"used_value":1000,"status":"SET"},"density":{"input_value":null,"used_value":48.5,"status":"SET"},"impacts":{"gwp":{"value":52.0,"unit":"kgCO2eq"},"pe":{"value":640.0,"unit":"MJ"},"adp":{"value":0.0019,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"be84aabaaac41126e1bd93ec3c10b355c6c7534cf9e3d7337cef9d6d0bb116c6","unit_weight":{"input_value":null,"used_value":2.99,"status":"SET"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}}},"manufacture of one gpu":{"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},"memory":{"input_value":null,"used_value":{"hash":"1d674b295466533ec734e75dd37f1c46e74a3decf6c0d5e55ebd348d81a3c48c","TYPE":"RAM","capacity":80,"density":0.625,"process":null,"manufacturer":null,"manufacture_date":null,"model":null,"integrator":null},"status":"SET"},"impacts":{"gwp":{"value":300.0,"unit":"kgCO2eq"},"pe":{"value":4000.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}}
+#+RESULTS:
+: estimated impacts: {'gwp': {'embodied': 10000.0, 'direct': 82000.0, 'total': 100000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 200000.0, 'direct': 16200000.0, 'total': 20000000.0, 'unit': 'MJ'}, 'adp': {'embodied': 1.0, 'direct': 0.0696, 'total': 1.0, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 462000.0, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 50.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 100.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 40.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: embodied impacts gwp: {'server': 7000.0, 'gpus': 8000.0, 'unit': 'kgCO2eq'}
+: dynamic impacts gwp: {'value': 26500.0, 'gpus': 25000.0, 'ram': 1510.0, 'cpus': 0.0, 'unit': 'kgCO2eq'}
 
-
-we can see in the results that we obtain close figures to those in the
+we can see in the results (full result in results/datetime bloom.json) that we obtain close figures to those in the
 paper.
 with embodied impacts of 6.9T CO_2 e for the servers and 8T for the
 GPUs to compare with the 7.6T for the servers and 3.6 T for the GPUs
@@ -316,51 +305,7 @@ obtain an estimate of 1.006 kWh, that is close to the 1.03kWh
 estimated for French Press on the Facility but not exactly the same
 value.
 This is the closest explaination of the results I am able to formulate
-while still not being exact.
-
-#+begin_src python :results output :exports both
-import subprocess
-
-server = {
-    "model": {
-      "type": "rack"
-    },
-    "configuration": {
-      "cpu": {
-        "units": 2,
-        "model": "AMD Milan EPYC 7543"
-      },
-      "ram": [
-        {
-          "units": 1,
-          "capacity": 512
-        }
-      ]
-    }
-}
-
-facility = {
-  "configuration": {
-      "cpu": {
-      "units" : 1,
-      "model": " Xeon Gold 6148"
-      }
-      
-  }
-}
-
-request = f"curl -x 'POST' \
- 'http://localhost:5000/v1/server/?verbose=true' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d {server}"
-s = subprocess.run(request, shell = True, capture_output=True, check=True)
-print(request)
-print(s.stdout)
-
-#+end_src
-
-#+RESULTS:
+while still not being exact
 
 ** experiments
 
@@ -407,45 +352,43 @@ curl -X 'POST' \
 
 * replicating results from [Dinarelli2022toward]
 
-Je commence à regarder pour essayer de retrouver leurs résultats. Pour
- l'instant, une première nouvelle rassurante c'est que j'arrive à
- passer des valeurs d'énergie aux valeurs
- d'équivalent carbone indiquées en utilisant l'intensité carbone indiquée.
-Seul problème, ils ont visiblement fait une erreur dans la traduction
- entre français et anglais pour les valeurs de consommation
- énergétique
- pour la table 1. Si on lit 4,473 comme 4.473, on retrouve bien 4.473*51 = 228.123 g CO_2 e.
-Maintenant reste à trouver des valeurs pour la consommation
-énergétique cohérentes
+First, let us define a prototype ml setup. We will use it to define
+the different hardware configurations. This will help us easily run
+the different experiments to reconstruct the results from the
+different tables.
 
+  #+begin_src python :results both :exports both :session
+model = {
+"configuration": {},
+"gpu": [],
+"psf": 1,
+"nb_nodes": 1,
+"cpu_usage_ratio": 1,
+"usage": {
+  "dynamic_ratio": 1,
+  "hours_use_time": 0,
+  "minute_use_time": 118.04,
+  "usage_location": "FRA",
+  "gwp_factor": 51E-3
+}
+}
+  #+end_src
 
-on peut estimer que la partition de Jean Zay à 32 GB soit celle ci :
-
-Avec la partition **gpu\_p2**, **gpu\_p2s** ou **gpu\_p2l** (partitions dédiées à la communauté IA), vous aurez accès aux ressources suivantes :
-
-+   31 nœuds de calcul accélérés octo-GPU avec :
-    +   2 processeurs Intel Cascade Lake 6226 (12 cœurs à 2,7 GHz), soit 24 cœurs par nœud
-    +   20 nœuds à 384 Go de mémoire (avec **gpu\_p2** ou **gpu\_p2s**)
-       +   11 nœuds à 768 Go de mémoire (avec **gpu\_p2** ou **gpu\_p2l**)
-       +   8 GPU Nvidia Tesla V100 SXM2 32Go
-
-Vu qu'après il est indiqué 4 GPU à 32 GB pour rappel, c'est peut-être celle ci :
-
-+   612 nœuds de calcul accélérés quadri-GPU avec :
-        +  2 processeurs Intel Cascade Lake 6248 (20 cœurs à 2,5 GHz), soit 40 cœurs par nœud
-        +  192 Go de mémoire par nœud
-        +  351 nœuds avec 4 GPU Nvidia Tesla V100 SXM2 16 Go (avec **v100-16g**)
-        +  261 nœuds avec 4 GPU Nvidia Tesla V100 SXM2 32 Go (avec **v100-32g**)
-
-En tout cas, sur le site de l'IDRIS, ce sont les deux seuls endroits
-où des GPU avec 32GB de mémoire sont indiqués.
+  #+RESULTS:
 
 
 
+** Trying to find information about the hardware setup
 
+The authors gave us some insight on the hardware used for running
+their experiments.
+
+#+begin_quote
 En tout cas, pour essayer de te donner les info dont tu as besoin, après si c'est pas ça, ou si tu as besoin d'autres informations, n'hésite pas à demander :
 "CPU : nombre de coeurs utilisés, modèle" => je ne sais pas combien de coeur CPU sont utilisé par les modèles wav2vec que j'ai utilisé, mes modèles SLU en utilise un seul.
-"GPU : nombre utilisés et modèles, mémoire utilisée" (je présume que tu voulais écrire "nombre de coeur utilisés") => 4 GPU pendant 100 heures pour fine-tuner le modèle wav2vec (seulement pour les expériences où il est fine-tuné évidemment), 1 seule GPU pour mes modèles SLU.
+"GPU : nombre utilisés et modèles, mémoire utilisée" (je présume que
+tu voulais écrire "nombre de coeur utilisés") => 
+4 GPU pendant 100 heures pour fine-tuner le modèle wav2vec (seulement pour les expériences où il est fine-tuné évidemment), 1 seule GPU pour mes modèles SLU.
 
 Pour la taille des modèles :
 environ 308 millions de paramètres pour le modèle wav2vec2
@@ -454,7 +397,6 @@ environ 12 millions de paramètres pour le modèle SLU
 Pour la mémoire utilisée, on est à environ 80GB de mémoire centrale (RAM de la CPU) et environ 8GB de mémoire GPU pour les entraînements des mes modèles SLU.
 Pour le fine-tuning des modèles wav2vec je ne sais pas, je n'ai jamais regardé pendant l'apprentissage de ces modèles, je sais que ça passe pas sur les GPU à 24GB du LIG, du coup j'ai dû le faire sur JZ sur la partition de GPU à 32 GB.
 Je présume que la plupart des GPU (4 GPU à 32GB pour rappel) est utilisé par le modèle et les gradients des paramètres, puisque l'apprentissage des modèles SLU sur les mêmes données passe sur des GPU à 12GB du LIG.
-1:36 PM
 
 Alors, sur JZ j'utilise les Tesla V100-SXM2-32GB .
 Au LIG, pour les modèles SLU, j'utilise principalement des NVIDIA GTX 1080 Ti 12Go ou des NVIDIA RTX 2080 Ti 11Go.
@@ -468,3 +410,96 @@ GPU, mais là je ne me rappelle pas dans quelle mesure je lance plus
 sur une machine que sur une autre. À priori c'est 90%-95% du temps sur
 des NVIDIA GTX 1080 Ti 12Go ou des NVIDIA RTX 2080 Ti 11Go en mesure
 égale.
+#+end_quote
+
+*** Hardware for the fine-tuning 
+They said that a node from the Jean Zay supercomputer with 4 GPUs with
+32GB memory was used for the fine tuning of the wave2vec model. if we look at the [[http://www.idris.fr/jean-zay/cpu/jean-zay-cpu-hw.html#gpu_p13][Idris' website]] we
+think that the nodes used were from the *v100-32g*, it is the only node
+with matching requirements in terms of number of GPU and memory per
+GPU.
+
+these nodes have the following hardware configuration :
+        +  2 Intel Cascade Lake 6248 (20 cores at 2,5 GHz)
+        +  192 GB de memory per node
+        +  4 GPU Nvidia Tesla V100 SXM2 32 GB
+
+Because we do not have the Intel Cascade Lake 6248 in our database, we
+need to find some information about it. We can see on [[https://www.intel.fr/content/www/fr/fr/products/sku/192446/intel-xeon-gold-6248-processor-27-5m-cache-2-50-ghz/specifications.html][Intel's webpage]]
+that it is a processor of the Cascade Lake architecture. On [[https://en.wikichip.org/wiki/intel/microarchitectures/cascade_lake#LCC_SoC][Wikichip]],
+we can see that Cascade Lake Processors use dies largely similar to
+those of the [[https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server)#Core][Skylake cores]]. Combining all of these pieces of
+information, we can get an estimation of the details of an Intel
+Cascade Lage 6248 :
+model: "Xeon Gold 6248"
+manufacture date: "2019"
+process: 14nm
+number of cores: 20
+die size: 694 mm² (XCC configuration)
+
+#+begin_src python :results output :exports both :session
+jean_zay = model
+jean_zay["configuration"] = {
+    "cpu": {
+      "units": 2,
+      "model": "Xeon 6248"
+    },
+    "ram": [
+      {
+        "units": 1,
+        "capacity": 192
+      }
+    ]
+  }
+jean_zay["gpu"] = [
+  {
+    "units": 4,
+    "model": "NVIDIA Tesla V100 SXM2 32 GB"
+  }
+]
+
+print(jean_zay)
+#+end_src
+
+#+RESULTS:
+: {'configuration': {'cpu': {'units': 2, 'model': 'Xeon 6248'}, 'ram': [{'units': 1, 'capacity': 192}]}, 'gpu': [{'units': 4, 'model': 'NVIDIA Tesla V100 SXM2 32 GB'}], 'psf': 1, 'nb_nodes': 1, 'cpu_usage_ratio': 1, 'usage': {'dynamic_ratio': 1, 'hours_use_time': 0, 'minute_use_time': 118.04, 'usage_location': 'FRA', 'gwp_factor': 0.051}}
+
+*** Hardware for training the models
+
+** coherency of the results
+
+One first good news is that information are coherent with themselves.
+Using the indicated (in the paper) carbon intensity of 51gCO_2 e/kWh
+used and indicated energy consumption, we are able to find back the carbon emissions
+indicated in the table. The only problem is that for table 1, it seems
+that there was a translation error when filling the table. The figures
+are written in the french notation with "," separating units from
+decimals and not the usual ".".
+For instance, if we look at the first line of table 1, we can read
+a consumption of 4,473 kWh, that we can translate to 4.473 kWh.
+#+begin_src python :results output :exports both
+print(4.473*51)
+#+end_src
+
+#+RESULTS:
+: 228.123
+
+We obtain 228.123g CO_2 e, the same value as indicated in the paper.
+
+We then only need to be able to find coherent energy consumption
+values to obtain comparable results.
+
+** Estimating energy consumption
+
+
+
+
+
+
+   #+begin_src python :results output :exports both
+import subprocess
+subprocess.run("curl -X 'POST' 'http://localhost:5000/v1/server/?verbose=true' -H 'accept: aplication/json' -H 'Content-Type: application/json' -d @boaviztapi/data/devices/server/dellR740.json", shell=True, check=True)
+   #+end_src
+
+   #+RESULTS:
+   : {"impacts":{"gwp":{"manufacture":980.0,"use":1170.0,"unit":"kgCO2eq"},"pe":{"manufacture":13000.0,"use":39700.0,"unit":"MJ"},"adp":{"manufacture":0.15,"use":0.000198,"unit":"kgSbeq"}},"verbose":{"CPU-1":{"unit":2,"hash":"4ff5c8975f5c2d342df94e8f4b1f58d708d040f3c7df1e4363804c76bc1ac576","core_units":{"input_value":24,"used_value":24,"status":"UNCHANGED"},"die_size":{"input_value":null,"used_value":8.103703703703703,"status":"SET"},"die_size_per_core":{"input_value":0.245,"used_value":0.245,"status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":171,"status":"SET"},"impacts":{"gwp":{"value":50.2,"unit":"kgCO2eq"},"pe":{"value":742.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":12,"hash":"4985faa0d798469b3deea291f6e9852862e43a06f5364164e57801035cfa3410","capacity":{"input_value":32,"used_value":32,"status":"UNCHANGED"},"density":{"input_value":1.79,"used_value":1.79,"status":"UNCHANGED"},"impacts":{"gwp":{"value":540.0,"unit":"kgCO2eq"},"pe":{"value":6720.0,"unit":"MJ"},"adp":{"value":0.0336,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"41514f07d8fa09207407a0693c20b7647cba1751e658999a51b4c003fc032c91","capacity":{"input_value":400,"used_value":400,"status":"UNCHANGED"},"density":{"input_value":50.6,"used_value":50.6,"status":"UNCHANGED"},"impacts":{"gwp":{"value":24.0,"unit":"kgCO2eq"},"pe":{"value":293.0,"unit":"MJ"},"adp":{"value":0.0011,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"cdb1c15f77554bf77b8d8ccc2094af7ed72a8a19ff3f0fd0a9909ecacec06428","unit_weight":{"input_value":2.99,"used_value":2.99,"status":"UNCHANGED"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"083dcd17f9997756af73de7c61f0cf2986b25075ad00bbf7c07e08cc80a2183f","case_type":{"input_value":"rack","used_value":"rack","status":"UNCHANGED"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"USAGE-1":{"unit":1,"hash":0,"years_use_time":{"input_value":null,"used_value":1,"status":"SET"},"hours_electrical_consumption":{"input_value":null,"used_value":0.35174445000000004,"status":"SET"},"usage_location":{"input_value":null,"used_value":"EEE","status":"SET"},"gwp_factor":{"input_value":null,"used_value":0.38,"status":"SET"},"pe_factor":{"input_value":null,"used_value":12.874,"status":"SET"},"adp_factor":{"input_value":null,"used_value":6.42e-08,"status":"SET"},"max_power":{"input_value":510.0,"used_value":510.0,"status":"UNCHANGED"},"workload":{"100":{"time":{"input_value":0.15,"used_value":0.15,"status":"UNCHANGED"},"power":{"input_value":1.0,"used_value":1.0,"status":"UNCHANGED"}},"50":{"time":{"input_value":0.55,"used_value":0.55,"status":"UNCHANGED"},"power":{"input_value":0.7235,"used_value":0.7235,"status":"UNCHANGED"}},"10":{"time":{"input_value":0.2,"used_value":0.2,"status":"UNCHANGED"},"power":{"input_value":0.5118,"used_value":0.5118,"status":"UNCHANGED"}},"idle":{"time":{"input_value":0.1,"used_value":0.1,"status":"UNCHANGED"},"power":{"input_value":0.3941,"used_value":0.3941,"status":"UNCHANGED"}}},"impacts":{"gwp":{"value":1170.0,"unit":"kgCO2eq"},"pe":{"value":39700.0,"unit":"MJ"},"adp":{"value":0.000198,"unit":"kgSbeq"}}}}}

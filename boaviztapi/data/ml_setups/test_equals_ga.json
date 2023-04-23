@@ -8,10 +8,9 @@
       "ram": [
         {
           "units": 1,
-          "capacity": 64,
-          "density": 1.79
+          "capacity": 64
         }
-      ],
+      ]
     }
   },
   "gpu": [
@@ -22,6 +21,7 @@
   ],
   "usage": {
     "hours_use_time": 12,
-    "gwp_factor": 51.28E-3
+    "gwp_factor": 51.28E-3,
+    "dynamic_ratio": 1
   }
 }
