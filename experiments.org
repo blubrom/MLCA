@@ -359,11 +359,12 @@ different tables.
 
   #+begin_src python :results both :exports both :session
 model = {
-"configuration": {},
+"server": {},
 "gpu": [],
 "psf": 1,
 "nb_nodes": 1,
-"cpu_usage_ratio": 1,
+"cpu_usage_ratio": 0,
+"gpu_usage_ratio": 1,
 "usage": {
   "dynamic_ratio": 1,
   "hours_use_time": 0,
@@ -439,7 +440,7 @@ die size: 694 mm² (XCC configuration)
 
 #+begin_src python :results output :exports both :session
 jean_zay = model
-jean_zay["configuration"] = {
+jean_zay["server"]["configuration"] = {
     "cpu": {
       "units": 2,
       "model": "Xeon 6248"
@@ -457,14 +458,47 @@ jean_zay["gpu"] = [
     "model": "NVIDIA Tesla V100 SXM2 32 GB"
   }
 ]
-
-print(jean_zay)
 #+end_src
 
 #+RESULTS:
-: {'configuration': {'cpu': {'units': 2, 'model': 'Xeon 6248'}, 'ram': [{'units': 1, 'capacity': 192}]}, 'gpu': [{'units': 4, 'model': 'NVIDIA Tesla V100 SXM2 32 GB'}], 'psf': 1, 'nb_nodes': 1, 'cpu_usage_ratio': 1, 'usage': {'dynamic_ratio': 1, 'hours_use_time': 0, 'minute_use_time': 118.04, 'usage_location': 'FRA', 'gwp_factor': 0.051}}
 
 *** Hardware for training the models
+
+We are told that training uses only one GPU at a time and that it uses
+roughly half of the time a RTX 2080 Ti and the other half a GTX 1080
+Ti, to represent this, we will put the two different models in the
+list of GPUs and use a 'gpu usage' of .5.
+We are also told that the training uses 80 GB memory with no
+additional information on the hardware used.
+Since we do not know any more precise information, we will use the
+default values of our tool to complete the missing pieces of information
+
+    #+begin_src python :results output :exports both :session
+
+training_SLU_model = model
+training_SLU_model["gpu"] = [
+  {
+    "units": 1,
+    "model": "NVIDIA GeForce RTX 2080 Ti 11GB"
+  },
+  {
+    "units":1,
+    "model": "NVIDIA GeForce GTX 1080 Ti"
+  }
+]
+training_SLU_model["gpu_usage"] = .5
+training_SLU_model["server"]["configuration"] = {
+    "ram": [
+      {
+        "units": 1,
+        "capacity": 80
+      }
+    ]
+}
+    
+    #+end_src
+
+    #+RESULTS:
 
 ** coherency of the results
 
@@ -491,15 +525,72 @@ values to obtain comparable results.
 
 ** Estimating energy consumption
 
+*** fine tuning of the SSL model
 
+    #+begin_src python :results output :exports both :session
+jean_zay["usage"]["hours_use_time"] = 100
+jean_zay["usage"]["minute_use_time"] = 0
+output = run_experiment(jean_zay, "fine_tuning_SSL.json")
+print_gwp_and_energy(output)
+    #+end_src
 
+    #+RESULTS:
+    : estimated impacts: {'gwp': {'embodied': 3.0, 'direct': 4.85, 'total': 8.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 50.0, 'direct': 1070.0, 'total': 1000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0005, 'direct': 4.62e-06, 'total': 0.0005, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 95.2, 'unit': 'kWh'}}
+    : to put impacts in perspective: {'relative_SNBC': {'value': 0.004, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.008, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.02, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+    : energy consumption: {'value': 95.2, 'unit': 'kWh'}
+    : dynamic impacts gwp: {'embodied': 3.0, 'direct': 4.85, 'total': 8.0, 'unit': 'kgCO2eq'}
 
+We can see that we obtain an estimate of 4.85kg CO_2 e for the direct
+impacts and a dynamic consumption of 95.2 kWh, which is really
+close to the 4.729kg CO_2 e and 97.720 kWh presented in the paper.
 
+*** Table 1
 
-   #+begin_src python :results output :exports both
-import subprocess
-subprocess.run("curl -X 'POST' 'http://localhost:5000/v1/server/?verbose=true' -H 'accept: aplication/json' -H 'Content-Type: application/json' -d @boaviztapi/data/devices/server/dellR740.json", shell=True, check=True)
-   #+end_src
+    #+begin_src python :results output :exports both :session
+print("spectro 3  steps :")
+training_SLU_model['usage']['hours_use_time'] = 36
+training_SLU_model['usage']['minute_use_time'] = 14
+output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_3-steps.json')
+print_gwp_and_energy(output)
 
-   #+RESULTS:
-   : {"impacts":{"gwp":{"manufacture":980.0,"use":1170.0,"unit":"kgCO2eq"},"pe":{"manufacture":13000.0,"use":39700.0,"unit":"MJ"},"adp":{"manufacture":0.15,"use":0.000198,"unit":"kgSbeq"}},"verbose":{"CPU-1":{"unit":2,"hash":"4ff5c8975f5c2d342df94e8f4b1f58d708d040f3c7df1e4363804c76bc1ac576","core_units":{"input_value":24,"used_value":24,"status":"UNCHANGED"},"die_size":{"input_value":null,"used_value":8.103703703703703,"status":"SET"},"die_size_per_core":{"input_value":0.245,"used_value":0.245,"status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":171,"status":"SET"},"impacts":{"gwp":{"value":50.2,"unit":"kgCO2eq"},"pe":{"value":742.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":12,"hash":"4985faa0d798469b3deea291f6e9852862e43a06f5364164e57801035cfa3410","capacity":{"input_value":32,"used_value":32,"status":"UNCHANGED"},"density":{"input_value":1.79,"used_value":1.79,"status":"UNCHANGED"},"impacts":{"gwp":{"value":540.0,"unit":"kgCO2eq"},"pe":{"value":6720.0,"unit":"MJ"},"adp":{"value":0.0336,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"41514f07d8fa09207407a0693c20b7647cba1751e658999a51b4c003fc032c91","capacity":{"input_value":400,"used_value":400,"status":"UNCHANGED"},"density":{"input_value":50.6,"used_value":50.6,"status":"UNCHANGED"},"impacts":{"gwp":{"value":24.0,"unit":"kgCO2eq"},"pe":{"value":293.0,"unit":"MJ"},"adp":{"value":0.0011,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"cdb1c15f77554bf77b8d8ccc2094af7ed72a8a19ff3f0fd0a9909ecacec06428","unit_weight":{"input_value":2.99,"used_value":2.99,"status":"UNCHANGED"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"083dcd17f9997756af73de7c61f0cf2986b25075ad00bbf7c07e08cc80a2183f","case_type":{"input_value":"rack","used_value":"rack","status":"UNCHANGED"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"USAGE-1":{"unit":1,"hash":0,"years_use_time":{"input_value":null,"used_value":1,"status":"SET"},"hours_electrical_consumption":{"input_value":null,"used_value":0.35174445000000004,"status":"SET"},"usage_location":{"input_value":null,"used_value":"EEE","status":"SET"},"gwp_factor":{"input_value":null,"used_value":0.38,"status":"SET"},"pe_factor":{"input_value":null,"used_value":12.874,"status":"SET"},"adp_factor":{"input_value":null,"used_value":6.42e-08,"status":"SET"},"max_power":{"input_value":510.0,"used_value":510.0,"status":"UNCHANGED"},"workload":{"100":{"time":{"input_value":0.15,"used_value":0.15,"status":"UNCHANGED"},"power":{"input_value":1.0,"used_value":1.0,"status":"UNCHANGED"}},"50":{"time":{"input_value":0.55,"used_value":0.55,"status":"UNCHANGED"},"power":{"input_value":0.7235,"used_value":0.7235,"status":"UNCHANGED"}},"10":{"time":{"input_value":0.2,"used_value":0.2,"status":"UNCHANGED"},"power":{"input_value":0.5118,"used_value":0.5118,"status":"UNCHANGED"}},"idle":{"time":{"input_value":0.1,"used_value":0.1,"status":"UNCHANGED"},"power":{"input_value":0.3941,"used_value":0.3941,"status":"UNCHANGED"}}},"impacts":{"gwp":{"value":1170.0,"unit":"kgCO2eq"},"pe":{"value":39700.0,"unit":"MJ"},"adp":{"value":0.000198,"unit":"kgSbeq"}}}}}
+print("spectro 2  steps :")
+training_SLU_model['usage']['hours_use_time'] = 24
+training_SLU_model['usage']['minute_use_time'] = 14
+output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_2-steps.json')
+print_gwp_and_energy(output)
+
+print("spectro 1 step :")
+training_SLU_model['usage']['hours_use_time'] = 15
+training_SLU_model['usage']['minute_use_time'] = 52
+output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_1-step.json')
+print_gwp_and_energy(output)
+    #+end_src
+
+    #+RESULTS:
+    #+begin_example
+    spectro 3  steps :
+    estimated impacts: {'gwp': {'embodied': 0.7, 'direct': 0.979, 'total': 2.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 9.0, 'direct': 217.0, 'total': 200.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0001, 'direct': 9.33e-07, 'total': 0.0001, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 19.2, 'unit': 'kWh'}}
+    to put impacts in perspective: {'relative_SNBC': {'value': 0.0008, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.002, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.004, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+    energy consumption: {'value': 19.2, 'unit': 'kWh'}
+    dynamic impacts gwp: {'embodied': 0.7, 'direct': 0.979, 'total': 2.0, 'unit': 'kgCO2eq'}
+    spectro 2  steps :
+    estimated impacts: {'gwp': {'embodied': 0.5, 'direct': 0.655, 'total': 1.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 6.0, 'direct': 145.0, 'total': 200.0, 'unit': 'MJ'}, 'adp': {'embodied': 9e-05, 'direct': 6.24e-07, 'total': 9e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 12.8, 'unit': 'kWh'}}
+    to put impacts in perspective: {'relative_SNBC': {'value': 0.0006, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.001, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.003, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+    energy consumption: {'value': 12.8, 'unit': 'kWh'}
+    dynamic impacts gwp: {'embodied': 0.5, 'direct': 0.655, 'total': 1.0, 'unit': 'kgCO2eq'}
+    spectro 1 step :
+    estimated impacts: {'gwp': {'embodied': 0.3, 'direct': 0.429, 'total': 0.7, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 4.0, 'direct': 94.9, 'total': 100.0, 'unit': 'MJ'}, 'adp': {'embodied': 6e-05, 'direct': 4.09e-07, 'total': 6e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 8.41, 'unit': 'kWh'}}
+    to put impacts in perspective: {'relative_SNBC': {'value': 0.0004, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.0007, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.002, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+    energy consumption: {'value': 8.41, 'unit': 'kWh'}
+    dynamic impacts gwp: {'embodied': 0.3, 'direct': 0.429, 'total': 0.7, 'unit': 'kgCO2eq'}
+    #+end_example
+We obtain the following results :
+- spectro 3 steps: 19.2kWh, 979g CO_2 e (vs 4.473kWh and 228gCO_2 e in
+  the paper)
+- spectro 2 steps: 12.8kWh, 655g CO_2 e (vs 2.989kWh and 152gCO_2 e in
+  the paper)
+- spectro 1 step: 8.41kWh, 429g CO_2 e (vs 1.708kWh and 87gCO_2 e in
+  the paper)
+We can see that we obtain carbon emission estimates around 4 to five times higher than
+those presented in the paper. It is expected that we obtain higher
+estimates than the measurements as presented in [Jay2023experimental]
