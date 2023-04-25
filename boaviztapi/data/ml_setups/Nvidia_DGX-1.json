@@ -1,17 +1,16 @@
 {
   "server": {
-    "model": {
-      "type": "rack"
-    },
     "configuration": {
       "cpu": {
-        "units": 2,
-        "model": "EPYC 7543"
+          "units": 1,
+          "die_size": 9.12,
+	  "tdp": 324,
+	  "core_units":40
       },
       "ram": [
         {
           "units": 1,
-          "capacity": 518
+          "capacity": 512
         }
       ]
     }
@@ -19,16 +18,16 @@
   "gpu": [
     {
       "units": 8,
-      "model": "NVIDIA A100 SXM4 80 GB"
+	"model": "NVIDIA A100 PCIe 80 GB"
     }
   ],
-  "psf": 1,
-  "nb_nodes": 48,
   "cpu_usage_ratio": 0,
+  "gpu_usage_ratio": 1, 
   "usage": {
-    "days_use_time": 118,
-    "hours_use_time": 5,
-    "minute_use_time": 41,
+    "dynamic_ratio": 0,	
+    "days_use_time": 0,
+    "hours_use_time": 0,
+    "minute_use_time": 1,
     "usage_location": "FRA",
     "gwp_factor": 51.28E-3
   }

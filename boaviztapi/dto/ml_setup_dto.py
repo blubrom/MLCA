@@ -14,8 +14,8 @@ class MLSetupDTO(BaseModel):
     gpu: Optional[List[Gpu]] = None
     psf: Optional[float] = None
     usage: Optional[UsageSetup] = None
-    gpu_usage_ratio: Optional[float] = None
-    cpu_usage_ratio: Optional[float] = None
+    gpu_usage: Optional[float] = None
+    cpu_usage: Optional[float] = None
     average_usage: Optional[float] = None
     hardware_replacement_rate: Optional[float] = None
 
@@ -48,14 +48,14 @@ class MLSetupDTO(BaseModel):
             return self.usage
 
     def get_cpu_usage(self) -> float:
-        if self.cpu_usage_ratio is None:
+        if self.cpu_usage is None:
             return self._DEFAULT_USAGE_RATIO
-        return self.cpu_usage_ratio
+        return self.cpu_usage
 
     def get_gpu_usage(self) -> float:
-        if self.gpu_usage_ratio is None:
+        if self.gpu_usage is None:
             return self._DEFAULT_USAGE_RATIO
-        return self.gpu_usage_ratio
+        return self.gpu_usage
 
     def get_nb_nodes(self) -> int:
         return self.nb_nodes or self._DEFAULT_NB_NODES

@@ -18,7 +18,7 @@ from datetime import datetime
 def run_experiment(model, filename):
   with open("tmp.json", "w") as tmp:
     json.dump(model, tmp)
-  path = "results/" + datetime.now().strftime("%d-%m-%y_%H-%M") + "_" + filename
+  path = "results/" + datetime.now().strftime("%d-%m-%y_%H-%M") + "_" + filename + ".json"
   with open(path, "w") as out:
     request = "curl -X 'POST' 'http://localhost:5000/v1/mlca/?verbose=true' -H 'accept: aplication/json' -H 'Content-Type: application/json' -d @tmp.json"
     results = subprocess.run(request, shell=True, check=True, capture_output=True, text=True)
@@ -209,7 +209,7 @@ with all of the previous information, we can run the estimation
 #+begin_src python :results output :exports both :session
 with open("boaviztapi/data/ml_setups/test_bloom.json",'r') as bloom:
     bloom_model = json.load(bloom)
-out = run_experiment(bloom_model,"bloom.json")
+out = run_experiment(bloom_model,"bloom")
 embodied = out["verbose"]["embodied impacts"]["gwp"]
 dynamic = out["verbose"]["dynamic impacts"]["gwp"]
 print(f"embodied impacts gwp: {embodied}")
@@ -530,7 +530,7 @@ values to obtain comparable results.
     #+begin_src python :results output :exports both :session
 jean_zay["usage"]["hours_use_time"] = 100
 jean_zay["usage"]["minute_use_time"] = 0
-output = run_experiment(jean_zay, "fine_tuning_SSL.json")
+output = run_experiment(jean_zay, "fine_tuning_SSL")
 print_gwp_and_energy(output)
     #+end_src
 
@@ -550,19 +550,19 @@ close to the 4.729kg CO_2 e and 97.720 kWh presented in the paper.
 print("spectro 3  steps :")
 training_SLU_model['usage']['hours_use_time'] = 36
 training_SLU_model['usage']['minute_use_time'] = 14
-output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_3-steps.json')
+output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_3-steps')
 print_gwp_and_energy(output)
 
 print("spectro 2  steps :")
 training_SLU_model['usage']['hours_use_time'] = 24
 training_SLU_model['usage']['minute_use_time'] = 14
-output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_2-steps.json')
+output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_2-steps')
 print_gwp_and_energy(output)
 
 print("spectro 1 step :")
 training_SLU_model['usage']['hours_use_time'] = 15
 training_SLU_model['usage']['minute_use_time'] = 52
-output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_1-step.json')
+output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_1-step')
 print_gwp_and_energy(output)
     #+end_src
 
@@ -594,3 +594,180 @@ We obtain the following results :
 We can see that we obtain carbon emission estimates around 4 to five times higher than
 those presented in the paper. It is expected that we obtain higher
 estimates than the measurements as presented in [Jay2023experimental]
+
+* replicating results from [Jay2023experimental] 
+
+The hardware used is a Nvidia DGX-1 with two Intel Xeon E5-2698 v4,
+512 GB of memory and 8 NVIDIA Teslo V100-SXM2-32GB. 
+
+The Carbon Intensity for France used in Green Algorithms V2.2 is
+51.28gCO_2 e/kWh ([[https://github.com/GreenAlgorithms/green-algorithms-tool/blob/master/data/latest/CI_aggregated.csv][latest version of Green Algorithms' Carbon Intensity
+Database]])
+
+To convert from kWh to kJ, one must multiply the result by 3.6E+3.
+
+we can see in [[https://github.com/GreenAlgorithms/green-algorithms-tool/blob/master/data/latest/TDP_gpu.csv][the latest version of Green Algorithms' GPU TDP database]]
+that they have a TDP value of 300W for an NVIDIA V100 GPU whereas we
+have a TDP of 250W for the same card in our database. As a first
+version, just to see if we are able to obtain the same exact results
+as those presented in the paper, we will use as GPUs a card with a TDP
+of 300W in our database: the NVIDIA A100 PCIe 80 GB.
+
+We can also see that the CPU model used is the Xeon E5-2698 v4 with a
+tdp 135. However, it isn't available in Green Algorithm, the model
+used is the Xeon E5-2697 v4 with a TDP of 145W and 18 cores.
+In order to reproduce the results presented in the paper, we will use
+in our setup one CPU with 40 cores, a TDP of 324W (145/18*40) and a
+die size of 9.12cm² (2*the die size of a Xeon E5-2698 v4, not relevant
+for the computation of energy)
+
+The link explaining the configuration used for the CPU benchmarks are
+exact copies of the ones for GPU benchmarks. We will therefore assume
+that the cpu usage was 1 and gpu usage was 0. This configuration leads
+to an energy consumption of 8.58Wh for one minute. Since this value is
+strangely similar to the value of 7.58Wh/min originaly presented in
+the paper. We will also assume that there was a mistake when copying
+results from the Green Algorithm website and therefore use the value
+of 8.58Wh/min instead of the value of 7.58Wh/min to compute the
+expected results.
+
+#+begin_src python :results output :exports both :session
+with open("boaviztapi/data/ml_setups/Nvidia_DGX-1.json", 'r') as m:
+    dgx_1_model = json.load(m)
+
+def get_energy_joules(results):
+    energy_kWh = results['impacts']['energy consumption']['value']
+    energy_J = 3.6E3*energy_kWh
+    return(f"energy consumption: {energy_J:.3f} kJ", energy_J)
+
+# expected results
+online_tools = {}
+
+# GPU
+online_tools['Green Algorithm GPU'] = {}
+online_tools['Green Algorithm GPU']['EP'] = (43.18 * 68 / 60) * 3.6 # converting to joules https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=1&memory=512&platformType=localServer
+online_tools['Green Algorithm GPU']['LU'] = (31.18 * 204 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0.7&memory=512&platformType=localServer
+online_tools['Green Algorithm GPU']['MG'] = (14.26 * 157 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0.2&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0.25&memory=512&platformType=localServer
+online_tools['Green Algorithm GPU']['idle'] = (2.29 * 157 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0&memory=512&platformType=localServer
+
+# CPU
+online_tools['Green Algorithm CPU'] = {}
+online_tools['Green Algorithm CPU']['EP'] = (8.58 * 50 / 60) * 3.6 # converting to joules https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=1&memory=512&platformType=localServer
+online_tools['Green Algorithm CPU']['LU'] = (8.58 * 30 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0.7&memory=512&platformType=localServer
+online_tools['Green Algorithm CPU']['MG'] = (8.58 * 125 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0.2&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0.25&memory=512&platformType=localServer
+online_tools['Green Algorithm CPU']['idle'] = (0 * 60 / 60) * 3.6 
+
+def experiment(model, core_type, benchmark, cpu_usage, gpu_usage, time):
+    print(benchmark)
+    model['cpu_usage'] = cpu_usage
+    model['gpu_usage'] = gpu_usage
+    model['usage']['minute_use_time'] = time
+    output = run_experiment(dgx_1_model, f'{core_type}_{benchmark}')
+    s, r = get_energy_joules(output)
+    diff ="{:.3f}".format(r - online_tools['Green Algorithm ' + core_type][benchmark])
+    print(s, f"difference from expectation: {diff} kJ")
+
+def experiments(model):
+    print('GPU benchmark')
+
+    experiment(model, 'GPU', 'EP', 0, 1, 68/60)
+    experiment(model, 'GPU', 'LU', 0, .7, 204/60)
+    experiment(model, 'GPU', 'MG', .2, .25, 157/60)
+
+    print('\nCPU benchmark')
+
+    experiment(model, 'CPU', 'EP', 1, 0, 50/60)
+    experiment(model, 'CPU', 'LU', 1, 0, 30/60)
+    experiment(model, 'CPU', 'MG', 1, 0, 125/60)
+
+print('Replicating the exact results')
+
+experiments(dgx_1_model)
+
+print('\nRunning the experiments with the "correct" setup')
+
+dgx_1_model_correct = dgx_1_model.copy()
+dgx_1_model_correct['server']['configuration']['cpu'] = {
+    "units": 2,
+    "model": "Xeon E5-2698 v4"
+}
+dgx_1_model_correct['gpu'] = [
+  {
+      "units": 8,
+      "model": "NVIDIA Tesla V100 SXM2 32 GB"
+  }
+]
+experiments(dgx_1_model_correct)
+
+
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Replicating the exact results
+GPU benchmark
+EP
+estimated impacts: {'gwp': {'embodied': 0.002, 'direct': 0.0, 'total': 0.002, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.03, 'direct': 0.0, 'total': 0.03, 'unit': 'MJ'}, 'adp': {'embodied': 2e-07, 'direct': 0.0, 'total': 2e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0489, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 1e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 2e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 5e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: 176.040 kJ difference from expectation: -0.134 kJ
+LU
+estimated impacts: {'gwp': {'embodied': 0.006, 'direct': 0.0, 'total': 0.006, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.08, 'direct': 0.0, 'total': 0.08, 'unit': 'MJ'}, 'adp': {'embodied': 5e-07, 'direct': 0.0, 'total': 5e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.106, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 3e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 6e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 2e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: 381.600 kJ difference from expectation: -0.043 kJ
+MG
+estimated impacts: {'gwp': {'embodied': 0.005, 'direct': 0.0, 'total': 0.005, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.06, 'direct': 0.0, 'total': 0.06, 'unit': 'MJ'}, 'adp': {'embodied': 4e-07, 'direct': 0.0, 'total': 4e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0373, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 2e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 5e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: 134.280 kJ difference from expectation: -0.049 kJ
+
+CPU benchmark
+EP
+estimated impacts: {'gwp': {'embodied': 0.001, 'direct': 0.0, 'total': 0.001, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.02, 'direct': 0.0, 'total': 0.02, 'unit': 'MJ'}, 'adp': {'embodied': 1e-07, 'direct': 0.0, 'total': 1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.00715, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 7e-07, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 1e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 4e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: 25.740 kJ difference from expectation: 0.000 kJ
+LU
+estimated impacts: {'gwp': {'embodied': 0.0009, 'direct': 0.0, 'total': 0.0009, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.01, 'direct': 0.0, 'total': 0.01, 'unit': 'MJ'}, 'adp': {'embodied': 7e-08, 'direct': 0.0, 'total': 7e-08, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.00429, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 4e-07, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 9e-07, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 2e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: 15.444 kJ difference from expectation: 0.000 kJ
+MG
+estimated impacts: {'gwp': {'embodied': 0.004, 'direct': 0.0, 'total': 0.004, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.0, 'total': 0.05, 'unit': 'MJ'}, 'adp': {'embodied': 3e-07, 'direct': 0.0, 'total': 3e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 2e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: 64.440 kJ difference from expectation: 0.090 kJ
+
+Running the experiments with the "correct" setup
+GPU benchmark
+EP
+estimated impacts: {'gwp': {'embodied': 0.002, 'direct': 0.0, 'total': 0.002, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.03, 'direct': 0.0, 'total': 0.03, 'unit': 'MJ'}, 'adp': {'embodied': 2e-07, 'direct': 0.0, 'total': 2e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0087, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 1e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 2e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 5e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: 31.320 kJ difference from expectation: -144.854 kJ
+LU
+estimated impacts: {'gwp': {'embodied': 0.006, 'direct': 0.0, 'total': 0.006, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.08, 'direct': 0.0, 'total': 0.08, 'unit': 'MJ'}, 'adp': {'embodied': 5e-07, 'direct': 0.0, 'total': 5e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0261, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 3e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 6e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 2e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: 93.960 kJ difference from expectation: -287.683 kJ
+MG
+estimated impacts: {'gwp': {'embodied': 0.005, 'direct': 0.0, 'total': 0.005, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.06, 'direct': 0.0, 'total': 0.06, 'unit': 'MJ'}, 'adp': {'embodied': 4e-07, 'direct': 0.0, 'total': 4e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0201, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 2e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 5e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: 72.360 kJ difference from expectation: -61.969 kJ
+
+CPU benchmark
+EP
+estimated impacts: {'gwp': {'embodied': 0.001, 'direct': 0.0, 'total': 0.001, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.02, 'direct': 0.0, 'total': 0.02, 'unit': 'MJ'}, 'adp': {'embodied': 1e-07, 'direct': 0.0, 'total': 1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0064, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 7e-07, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 2e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 4e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: 23.040 kJ difference from expectation: -2.700 kJ
+LU
+estimated impacts: {'gwp': {'embodied': 0.0009, 'direct': 0.0, 'total': 0.0009, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.01, 'direct': 0.0, 'total': 0.01, 'unit': 'MJ'}, 'adp': {'embodied': 8e-08, 'direct': 0.0, 'total': 8e-08, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.00384, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 4e-07, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 9e-07, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 2e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: 13.824 kJ difference from expectation: -1.620 kJ
+MG
+estimated impacts: {'gwp': {'embodied': 0.004, 'direct': 0.0, 'total': 0.004, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.0, 'total': 0.05, 'unit': 'MJ'}, 'adp': {'embodied': 3e-07, 'direct': 0.0, 'total': 3e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.016, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 2e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: 57.600 kJ difference from expectation: -6.750 kJ
+#+end_example
+
+We can see that we are able to obtain results that are exactly the
+same as the expected ones up to rounding errors (difference 3 orders of magnitude
+lesser than the value). We can also see that even though the input
+value to Green Algorithms does not exactly correspond to the hardware
+setup used, we can also see that the difference to the expected
+results isn't high for CPUs (10 times less than the expected value)
+and is however pretty significant for the GPU benchmarks.

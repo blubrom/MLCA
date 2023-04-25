@@ -22,3 +22,4 @@ NVIDIA Tesla P4,75,,16,Pascal,2016,3.14,8,https://www.techpowerup.com/gpu-specs/
 NVIDIA Tesla K80,300,,28,Kepler 2.0,2014,5.61,12,https://www.techpowerup.com/gpu-specs/tesla-k80.c2616,
 NVIDIA Tesla V100 PCIe 32 GB,250,,12,Volta,2018,8.15,32,https://www.techpowerup.com/gpu-specs/tesla-v100-pcie-32-gb.c3184,
 NVIDIA Quadro RTX 6000,260,,12,Turing,2018,7.54,24,https://www.techpowerup.com/gpu-specs/quadro-rtx-6000.c3307,
+NVIDIA Tesla V100 SXM2 32 GB,250,,12,Volta,2018,8.15,32,https://www.techpowerup.com/gpu-specs/tesla-v100-sxm2-32-gb.c3185

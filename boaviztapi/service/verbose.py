@@ -21,6 +21,14 @@ def verbose_setup(complete_setup: MLSetup, input_setup: MLSetup):
             for c in complete_setup.server.config_components if c.TYPE == 'CPU') / 1000
     usage_cpu.dynamic_ratio = 1
 
+    for attr in ['nb_nodes', 'psf', 'cpu_usage', 'gpu_usage', 'average_usage', 'hardware_replacement_rate']:
+        json_output[attr] = {}
+        json_output[attr]["input_value"] = getattr(input_setup, attr, None)
+        json_output[attr]["used_value"] = getattr(complete_setup, attr, None)
+        json_output[attr]["status"] = get_status(json_output[attr]["used_value"], json_output[attr]["input_value"])
+
+
+
     gwp_gpu = usage_gpus.impact_gwp()
     gwp_ram = usage_ram.impact_gwp()
     gwp_cpu = usage_cpu.impact_gwp()
