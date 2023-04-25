@@ -1,9 +1,13 @@
 Experiments for validating our tool :
 
-first, run the program, we will then be able to send it requests
-#+begin_src shell :results output :exports both
+first, run the program, we will then be able to send it requests with
+the following command:
+
 pipenv run uvicorn boaviztapi.main:app --host=localhost --port 5000 &
-#+end_src
+
+this must be realised in another terminal and not in emacs because,
+since it does not terminate, trying to execute it in your emacs would
+make your emacs wait for the death of the process forever.
 
 
 * Defining some helper functions to easily run experiments and read their results
@@ -189,7 +193,7 @@ curl -X 'POST' \
 #+end_src
 
 #+RESULTS:
-: {"impacts":{"gwp":{"manufacture":300.0,"use":"not implemented","unit":"kgCO2eq"},"pe":{"manufacture":4000.0,"use":"not implemented","unit":"MJ"},"adp":{"manufacture":0.03,"use":"not implemented","unit":"kgSbeq"}},
+: {"impacts":{"gwp":{"manufacture":300.0,"use":"not implemented","unit":"kgCO2eq"},"pe":{"manufacture":4000.0,"use":"not implemented","unit":"MJ"},"adp":{"manufacture":0.03,"use":"not implemented","unit":"kgSbeq"}},"verbose":{"units":1,"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},"memory":{"capacity":{"input_value":null,"used_value":80,"status":"SET"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":290.0,"unit":"kgCO2eq"},"pe":{"value":3600.0,"unit":"MJ"},"adp":{"value":0.0098,"unit":"kgSbeq"}}},"impacts":{"gwp":{"value":300.0,"unit":"kgCO2eq"},"pe":{"value":4000.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}
 "verbose":{"units":1,"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA
 A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80
 GB","status":"UNCHANGED"},
@@ -217,20 +221,20 @@ print(f"dynamic impacts gwp: {dynamic}")
 #+end_src
 
 #+RESULTS:
-: estimated impacts: {'gwp': {'embodied': 10000.0, 'direct': 82000.0, 'total': 100000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 200000.0, 'direct': 16200000.0, 'total': 20000000.0, 'unit': 'MJ'}, 'adp': {'embodied': 1.0, 'direct': 0.0696, 'total': 1.0, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 462000.0, 'unit': 'kWh'}}
+: estimated impacts: {'gwp': {'embodied': 10000.0, 'direct': 83100.0, 'total': 100000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 200000.0, 'direct': 18300000.0, 'total': 20000000.0, 'unit': 'MJ'}, 'adp': {'embodied': 1.0, 'direct': 0.0788, 'total': 1.0, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 523000.0, 'unit': 'kWh'}}
 : to put impacts in perspective: {'relative_SNBC': {'value': 50.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 100.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 40.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 : embodied impacts gwp: {'server': 7000.0, 'gpus': 8000.0, 'unit': 'kgCO2eq'}
-: dynamic impacts gwp: {'value': 26500.0, 'gpus': 25000.0, 'ram': 1510.0, 'cpus': 0.0, 'unit': 'kgCO2eq'}
+: dynamic impacts gwp: {'value': 26800.0, 'gpus': 22400.0, 'ram': 1350.0, 'cpus': 3140.0, 'unit': 'kgCO2eq'}
 
 we can see in the results (full result in results/datetime bloom.json) that we obtain close figures to those in the
 paper.
-with embodied impacts of 6.9T CO_2 e for the servers and 8T for the
+with embodied impacts of 7T CO_2 e for the servers and 8T for the
 GPUs to compare with the 7.6T for the servers and 3.6 T for the GPUs
 in the paper. Most of the difference is due to estimated impacts of
 300 kgCO_2 e for one GPU while it was estimated to 125 kgCO_2 e in the
 paper.
 
-For the dynamic consumption, we obtain an estimate of 26.5T CO_2 e,
+For the dynamic consumption, we obtain an estimate of 26.8T CO_2 e,
 mainly due to the GPUs (accountable for 25T, the only difference with
 the figure obtained in the paper being the slightly off conversion
 from real time to GPU hours) while the memory, not accounted for in
@@ -345,6 +349,9 @@ curl -X 'POST' \
   }
 }'
 #+end_src
+
+#+RESULTS:
+: {"impacts":{"gwp":{"embodied":0.05,"direct":0.312,"total":0.4,"unit":"kgCO2eq"},"pe":{"embodied":0.7,"direct":90.2,"total":90.0,"unit":"MJ"},"adp":{"embodied":1e-05,"direct":3.88e-07,"total":1e-05,"unit":"kgSbeq"},"energy consumption":{"value":2.58,"unit":"kWh"}},"perspective":{"relative_SNBC":{"value":0.0002,"unit":"Emissions of X Person per year in the \"Stratégie Nationale Bas Carbone (SNBC)\" sustanability objectives for France"},"relative_PB_Climate_Change":{"value":0.0004,"unit":"person in a scenario where the Planetary Boundary for Climate Change is not exceded"},"relative_PB_ADP":{"value":0.0003,"unit":"person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded"}},"verbose":{"nb_nodes":{"input_value":1,"used_value":1,"status":"UNCHANGED"},"psf":{"input_value":1.0,"used_value":1.0,"status":"UNCHANGED"},"cpu_usage":{"input_value":1,"used_value":1,"status":"UNCHANGED"},"gpu_usage":{"input_value":1,"used_value":1,"status":"UNCHANGED"},"average_usage":{"input_value":null,"used_value":0.85,"status":"SET"},"hardware_replacement_rate":{"input_value":null,"used_value":6,"status":"SET"},"usage":{"years_use_time":{"input_value":null,"used_value":0,"status":"SET"},"hours_electrical_consumption":{"input_value":null,"used_value":1.31192,"status":"SET"},"usage_location":{"input_value":"FRA","used_value":"FRA","status":"UNCHANGED"},"gwp_factor":{"input_value":0.039,"used_value":0.039,"status":"UNCHANGED"},"pe_factor":{"input_value":null,"used_value":11.289,"status":"SET"},"adp_factor":{"input_value":null,"used_value":4.86e-08,"status":"SET"},"dynamic_ratio":{"input_value":null,"used_value":3.0969267139479904,"status":"SET"},"minute_use_time":{"input_value":118.04,"used_value":118.04,"status":"UNCHANGED"},"dynamic_impact_gwp":{"input_value":null,"used_value":[0.10065837392,3],"status":"SET"},"dynamic_impact_adp":{"input_value":null,"used_value":[1.25435819808e-07,3],"status":"SET"},"dynamic_impact_pe":{"input_value":null,"used_value":[29.13672777392,3],"status":"SET"},"impacts":{"gwp":{"value":0.312,"unit":"kgCO2eq"},"pe":{"value":90.2,"unit":"MJ"},"adp":{"value":3.88e-07,"unit":"kgSbeq"}}},"embodied impacts":{"gwp":{"server":0.026,"gpus":0.03,"unit":"kgCO2eq"},"pe":{"server":0.35,"gpus":0.3,"unit":"MJ"},"adp":{"server":5.3e-06,"gpus":4e-06,"unit":"kgSbeq"}},"dynamic impacts":{"gwp":{"value":0.101,"gpus":0.0767,"ram":0.000915,"cpus":0.023,"unit":"kgCO2eq"},"pe":{"value":29.1,"gpus":22.2,"ram":0.265,"cpus":6.66,"unit":"MJ"},"adp":{"value":1.25e-07,"gpus":9.56e-08,"ram":1.14e-09,"cpus":2.87e-08,"unit":"kgSbeq"}},"manufacture of one server node":{"CPU-1":{"unit":2,"hash":"e9fb3b5d6c10d5704f77b5ceb8b83db4da55d51793389f5c5d1ac968decb6146","die_size":{"input_value":null,"used_value":6.94,"status":"SET"},"model":{"input_value":"Xeon Gold 6148","used_value":"Xeon Gold 6148","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":150,"status":"SET"},"impacts":{"gwp":{"value":45.6,"unit":"kgCO2eq"},"pe":{"value":680.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":1,"hash":"a34b138e4ee0b4c832576fe84c3ef50c4e9713ab83fe8269fdc4dbacfd382efb","capacity":{"input_value":32,"used_value":32,"status":"UNCHANGED"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":120.0,"unit":"kgCO2eq"},"pe":{"value":1500.0,"unit":"MJ"},"adp":{"value":0.0049,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"cb269039943b145f924c394acd2f665c10b23bddf954428af81bd8eccaff3d6a","capacity":{"input_value":null,"used_value":1000,"status":"SET"},"density":{"input_value":null,"used_value":48.5,"status":"SET"},"impacts":{"gwp":{"value":52.0,"unit":"kgCO2eq"},"pe":{"value":640.0,"unit":"MJ"},"adp":{"value":0.0019,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"be84aabaaac41126e1bd93ec3c10b355c6c7534cf9e3d7337cef9d6d0bb116c6","unit_weight":{"input_value":null,"used_value":2.99,"status":"SET"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"d510a031d97870b128df7e34c32ed8264c7ac8f1786f012cce7f6dbf2a6ffebf","case_type":{"input_value":null,"used_value":"rack","status":"SET"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}}},"manufacture of one gpu":{"die_size":{"input_value":null,"used_value":8.15,"status":"SET"},"model":{"input_value":"NVIDIA Tesla V100 PCIe 32 GB","used_value":"NVIDIA Tesla V100 PCIe 32 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":250,"status":"SET"},"memory_size":{"input_value":null,"used_value":32,"status":"SET"},"memory":{"capacity":{"input_value":null,"used_value":32,"status":"SET"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":120.0,"unit":"kgCO2eq"},"pe":{"value":1500.0,"unit":"MJ"},"adp":{"value":0.0049,"unit":"kgSbeq"}}},"impacts":{"gwp":{"value":100.0,"unit":"kgCO2eq"},"pe":{"value":2000.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}}
 
 : #+RESULTS:{"impacts":{"gwp":{"embodied":0.05,"direct":0.24,"total":0.3,"unit":"kgCO2eq"},"pe":{"embodied":0.7,"direct":69.6,"total":70.0,"unit":"MJ"},"adp":{"embodied":1e-05,"direct":3e-07,"total":1e-05,"unit":"kgSbeq"},"energy consumption":{"value":1.99,"unit":"kWh"}},"perspective":{"relative_SNBC":{"value":0.0001,"unit":"Emissions of X Person per year in the \"Stratégie Nationale Bas Carbone (SNBC)\" sustanability objectives for France"},"relative_PB_Climate_Change":{"value":0.0003,"unit":"person in a scenario where the Planetary Boundary for Climate Change is not exceded"},"relative_PB_ADP":{"value":0.0003,"unit":"person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded"}},"verbose":{"usage":{"years_use_time":{"input_value":null,"used_value":0,"status":"SET"},"hours_electrical_consumption":{"input_value":null,"used_value":1.01192,"status":"SET"},"usage_location":{"input_value":"FRA","used_value":"FRA","status":"UNCHANGED"},"gwp_factor":{"input_value":0.039,"used_value":0.039,"status":"UNCHANGED"},"pe_factor":{"input_value":null,"used_value":11.289,"status":"SET"},"adp_factor":{"input_value":null,"used_value":4.86e-08,"status":"SET"},"dynamic_ratio":{"input_value":null,"used_value":3.0969267139479904,"status":"SET"},"minute_use_time":{"input_value":118.04,"used_value":118.04,"status":"UNCHANGED"},"dynamic_impact_gwp":{"input_value":null,"used_value":[0.07764057392,3],"status":"SET"},"dynamic_impact_adp":{"input_value":null,"used_value":[9.6752099808e-08,3],"status":"SET"},"dynamic_impact_pe":{"input_value":null,"used_value":[22.47395997392,3],"status":"SET"},"impacts":{"gwp":{"value":0.24,"unit":"kgCO2eq"},"pe":{"value":69.6,"unit":"MJ"},"adp":{"value":3e-07,"unit":"kgSbeq"}}},"embodied impacts":{"gwp":{"server":0.026,"gpus":0.03,"unit":"kgCO2eq"},"pe":{"server":0.35,"gpus":0.3,"unit":"MJ"},"adp":{"server":5.3e-06,"gpus":4e-06,"unit":"kgSbeq"}},"dynamic impacts":{"gwp":{"value":0.0776,"gpus":0.0767,"ram":0.000915,"cpus":0.0,"unit":"kgCO2eq"},"pe":{"value":22.5,"gpus":22.2,"ram":0.265,"cpus":0.0,"unit":"MJ"},"adp":{"value":9.68e-08,"gpus":9.56e-08,"ram":1.14e-09,"cpus":0.0,"unit":"kgSbeq"}},"manufacture of one server node":{"CPU-1":{"unit":2,"hash":"e9fb3b5d6c10d5704f77b5ceb8b83db4da55d51793389f5c5d1ac968decb6146","die_size":{"input_value":null,"used_value":6.94,"status":"SET"},"model":{"input_value":"Xeon Gold 6148","used_value":"Xeon Gold 6148","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":150,"status":"SET"},"impacts":{"gwp":{"value":45.6,"unit":"kgCO2eq"},"pe":{"value":680.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":1,"hash":"a34b138e4ee0b4c832576fe84c3ef50c4e9713ab83fe8269fdc4dbacfd382efb","capacity":{"input_value":32,"used_value":32,"status":"UNCHANGED"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":120.0,"unit":"kgCO2eq"},"pe":{"value":1500.0,"unit":"MJ"},"adp":{"value":0.0049,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"cb269039943b145f924c394acd2f665c10b23bddf954428af81bd8eccaff3d6a","capacity":{"input_value":null,"used_value":1000,"status":"SET"},"density":{"input_value":null,"used_value":48.5,"status":"SET"},"impacts":{"gwp":{"value":52.0,"unit":"kgCO2eq"},"pe":{"value":640.0,"unit":"MJ"},"adp":{"value":0.0019,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"be84aabaaac41126e1bd93ec3c10b355c6c7534cf9e3d7337cef9d6d0bb116c6","unit_weight":{"input_value":null,"used_value":2.99,"status":"SET"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"d510a031d97870b128df7e34c32ed8264c7ac8f1786f012cce7f6dbf2a6ffebf","case_type":{"input_value":null,"used_value":"rack","status":"SET"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}}},"manufacture of one gpu":{"die_size":{"input_value":null,"used_value":8.15,"status":"SET"},"model":{"input_value":"NVIDIA Tesla V100 PCIe 32 GB","used_value":"NVIDIA Tesla V100 PCIe 32 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":250,"status":"SET"},"memory_size":{"input_value":null,"used_value":32,"status":"SET"},"memory":{"capacity":{"input_value":null,"used_value":32,"status":"SET"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":120.0,"unit":"kgCO2eq"},"pe":{"value":1500.0,"unit":"MJ"},"adp":{"value":0.0049,"unit":"kgSbeq"}}},"impacts":{"gwp":{"value":100.0,"unit":"kgCO2eq"},"pe":{"value":2000.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}}
 
@@ -535,10 +542,10 @@ print_gwp_and_energy(output)
     #+end_src
 
     #+RESULTS:
-    : estimated impacts: {'gwp': {'embodied': 3.0, 'direct': 4.85, 'total': 8.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 50.0, 'direct': 1070.0, 'total': 1000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0005, 'direct': 4.62e-06, 'total': 0.0005, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 95.2, 'unit': 'kWh'}}
-    : to put impacts in perspective: {'relative_SNBC': {'value': 0.004, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.008, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.02, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-    : energy consumption: {'value': 95.2, 'unit': 'kWh'}
-    : dynamic impacts gwp: {'embodied': 3.0, 'direct': 4.85, 'total': 8.0, 'unit': 'kgCO2eq'}
+    : estimated impacts: {'gwp': {'embodied': 2.0, 'direct': 2.09, 'total': 4.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 30.0, 'direct': 463.0, 'total': 500.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0004, 'direct': 1.99e-06, 'total': 0.0004, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 41.0, 'unit': 'kWh'}}
+    : to put impacts in perspective: {'relative_SNBC': {'value': 0.002, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.004, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.01, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+    : energy consumption: {'value': 41.0, 'unit': 'kWh'}
+    : dynamic impacts gwp: {'embodied': 2.0, 'direct': 2.09, 'total': 4.0, 'unit': 'kgCO2eq'}
 
 We can see that we obtain an estimate of 4.85kg CO_2 e for the direct
 impacts and a dynamic consumption of 95.2 kWh, which is really
@@ -569,29 +576,29 @@ print_gwp_and_energy(output)
     #+RESULTS:
     #+begin_example
     spectro 3  steps :
-    estimated impacts: {'gwp': {'embodied': 0.7, 'direct': 0.979, 'total': 2.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 9.0, 'direct': 217.0, 'total': 200.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0001, 'direct': 9.33e-07, 'total': 0.0001, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 19.2, 'unit': 'kWh'}}
-    to put impacts in perspective: {'relative_SNBC': {'value': 0.0008, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.002, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.004, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-    energy consumption: {'value': 19.2, 'unit': 'kWh'}
-    dynamic impacts gwp: {'embodied': 0.7, 'direct': 0.979, 'total': 2.0, 'unit': 'kgCO2eq'}
+    estimated impacts: {'gwp': {'embodied': 0.7, 'direct': 0.757, 'total': 1.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 9.0, 'direct': 168.0, 'total': 200.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0001, 'direct': 7.22e-07, 'total': 0.0001, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 14.8, 'unit': 'kWh'}}
+    to put impacts in perspective: {'relative_SNBC': {'value': 0.0007, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.001, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.004, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+    energy consumption: {'value': 14.8, 'unit': 'kWh'}
+    dynamic impacts gwp: {'embodied': 0.7, 'direct': 0.757, 'total': 1.0, 'unit': 'kgCO2eq'}
     spectro 2  steps :
-    estimated impacts: {'gwp': {'embodied': 0.5, 'direct': 0.655, 'total': 1.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 6.0, 'direct': 145.0, 'total': 200.0, 'unit': 'MJ'}, 'adp': {'embodied': 9e-05, 'direct': 6.24e-07, 'total': 9e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 12.8, 'unit': 'kWh'}}
-    to put impacts in perspective: {'relative_SNBC': {'value': 0.0006, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.001, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.003, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-    energy consumption: {'value': 12.8, 'unit': 'kWh'}
-    dynamic impacts gwp: {'embodied': 0.5, 'direct': 0.655, 'total': 1.0, 'unit': 'kgCO2eq'}
+    estimated impacts: {'gwp': {'embodied': 0.5, 'direct': 0.506, 'total': 1.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 6.0, 'direct': 112.0, 'total': 100.0, 'unit': 'MJ'}, 'adp': {'embodied': 9e-05, 'direct': 4.83e-07, 'total': 9e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 9.93, 'unit': 'kWh'}}
+    to put impacts in perspective: {'relative_SNBC': {'value': 0.0005, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.001, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.003, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+    energy consumption: {'value': 9.93, 'unit': 'kWh'}
+    dynamic impacts gwp: {'embodied': 0.5, 'direct': 0.506, 'total': 1.0, 'unit': 'kgCO2eq'}
     spectro 1 step :
-    estimated impacts: {'gwp': {'embodied': 0.3, 'direct': 0.429, 'total': 0.7, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 4.0, 'direct': 94.9, 'total': 100.0, 'unit': 'MJ'}, 'adp': {'embodied': 6e-05, 'direct': 4.09e-07, 'total': 6e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 8.41, 'unit': 'kWh'}}
-    to put impacts in perspective: {'relative_SNBC': {'value': 0.0004, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.0007, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.002, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-    energy consumption: {'value': 8.41, 'unit': 'kWh'}
-    dynamic impacts gwp: {'embodied': 0.3, 'direct': 0.429, 'total': 0.7, 'unit': 'kgCO2eq'}
+    estimated impacts: {'gwp': {'embodied': 0.3, 'direct': 0.332, 'total': 0.6, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 4.0, 'direct': 73.4, 'total': 80.0, 'unit': 'MJ'}, 'adp': {'embodied': 6e-05, 'direct': 3.16e-07, 'total': 6e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 6.5, 'unit': 'kWh'}}
+    to put impacts in perspective: {'relative_SNBC': {'value': 0.0003, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.0006, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.002, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+    energy consumption: {'value': 6.5, 'unit': 'kWh'}
+    dynamic impacts gwp: {'embodied': 0.3, 'direct': 0.332, 'total': 0.6, 'unit': 'kgCO2eq'}
     #+end_example
 We obtain the following results :
-- spectro 3 steps: 19.2kWh, 979g CO_2 e (vs 4.473kWh and 228gCO_2 e in
+- spectro 3 steps: 14.8kWh, 757g CO_2 e (vs 4.473kWh and 228gCO_2 e in
   the paper)
-- spectro 2 steps: 12.8kWh, 655g CO_2 e (vs 2.989kWh and 152gCO_2 e in
+- spectro 2 steps: 9.93kWh, 506g CO_2 e (vs 2.989kWh and 152gCO_2 e in
   the paper)
-- spectro 1 step: 8.41kWh, 429g CO_2 e (vs 1.708kWh and 87gCO_2 e in
+- spectro 1 step: 6.5kWh, 322g CO_2 e (vs 1.708kWh and 87gCO_2 e in
   the paper)
-We can see that we obtain carbon emission estimates around 4 to five times higher than
+We can see that we obtain carbon emission estimates around 4 times higher than
 those presented in the paper. It is expected that we obtain higher
 estimates than the measurements as presented in [Jay2023experimental]
 
@@ -763,6 +770,33 @@ estimated impacts: {'gwp': {'embodied': 0.004, 'direct': 0.0, 'total': 0.004, 'u
 to put impacts in perspective: {'relative_SNBC': {'value': 2e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: 57.600 kJ difference from expectation: -6.750 kJ
 #+end_example
+
+we obtain the following results :
+When trying to obtain the exact same results (same hardware setup as used for
+obtaining values with Green Algorithms)
+for the GPU benchmark
+| Benchmark | Value (kJ) | Difference (kJ) |
+| EP        |    176.040 |          -0.134 |
+| LU        |    381.600 |          -0.043 |
+| MG        |    134.280 |          -0.049 |
+for the CPU benchmarks
+| Benchmark | Value (kJ) | Difference (kJ) |
+| EP        |     25.740 |           0.000 |
+| LU        |     15.444 |           0.000 |
+| MG        |     64.440 |           0.090 |
+
+
+When using the hardware setup really used:
+for the GPU benchmark
+| Benchmark | Value (kJ) | Difference (kJ) |
+| EP        |     31.320 |        -144.854 |
+| LU        |     93.960 |        -287.683 |
+| MG        |     72.360 |         -61.969 |
+for the CPU benchmarks
+| Benchmark | Value (kJ) | Difference (kJ) |
+| EP        |     23.040 |          -2.700 |
+| LU        |     13.824 |          -1.620 |
+| MG        |     57.600 |          -6.750 |
 
 We can see that we are able to obtain results that are exactly the
 same as the expected ones up to rounding errors (difference 3 orders of magnitude
