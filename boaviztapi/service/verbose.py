@@ -42,6 +42,11 @@ def verbose_setup(complete_setup: MLSetup, input_setup: MLSetup):
     json_output["usage"] = verbose_component(
         complete_setup.usage, input_setup.usage)
 
+    json_output['dynamic energy consumption'] = {
+        'value': rd.round_to_sigfig(*complete_setup.usage.dynamic_energy_consumption()),
+        'unit': "kWh"
+    }
+
     json_output["embodied impacts"] = {
         'gwp': {
             'server': rd.round_to_sigfig(*complete_setup.gwp_embodied_server),

@@ -2,15 +2,20 @@
   "server": {
     "configuration": {
       "cpu": {
-          "units": 1,
-          "die_size": 9.12,
-	  "tdp": 324,
-	  "core_units":40
+	"units": 2,
+	"model": "Xeon E5-2698 v4"
       },
       "ram": [
         {
           "units": 1,
           "capacity": 512
+        }
+      ],
+	"disk": [
+        {
+	  "units": 4,
+          "capacity": 1920,
+	  "type": "ssd" 
         }
       ]
     }
@@ -18,13 +23,13 @@
   "gpu": [
     {
       "units": 8,
-	"model": "NVIDIA A100 PCIe 80 GB"
+	"model": "NVIDIA Tesla V100 SXM2 32 GB"
     }
   ],
-  "cpu_usage_ratio": 0,
-  "gpu_usage_ratio": 1, 
+  "cpu_usage": 0,
+  "gpu_usage": 1, 
   "usage": {
-    "dynamic_ratio": 0,	
+    "dynamic_ratio": 1,	
     "days_use_time": 0,
     "hours_use_time": 0,
     "minute_use_time": 1,

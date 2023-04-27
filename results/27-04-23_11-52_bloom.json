@@ -1,61 +1,61 @@
 {
     "impacts": {
         "gwp": {
-            "embodied": 0.004,
-            "direct": 0.0,
-            "total": 0.004,
+            "embodied": 10000.0,
+            "direct": 83100.0,
+            "total": 100000.0,
             "unit": "kgCO2eq"
         },
         "pe": {
-            "embodied": 0.05,
-            "direct": 0.0,
-            "total": 0.05,
+            "embodied": 200000.0,
+            "direct": 18300000.0,
+            "total": 20000000.0,
             "unit": "MJ"
         },
         "adp": {
-            "embodied": 3e-07,
-            "direct": 0.0,
-            "total": 3e-07,
+            "embodied": 1.0,
+            "direct": 0.0788,
+            "total": 1.0,
             "unit": "kgSbeq"
         },
         "energy consumption": {
-            "value": 0.016,
+            "value": 1620000.0,
             "unit": "kWh"
         }
     },
     "perspective": {
         "relative_SNBC": {
-            "value": 2e-06,
+            "value": 50.0,
             "unit": "Emissions of X Person per year in the \"Strat\u00e9gie Nationale Bas Carbone (SNBC)\" sustanability objectives for France"
         },
         "relative_PB_Climate_Change": {
-            "value": 4e-06,
+            "value": 100.0,
             "unit": "person in a scenario where the Planetary Boundary for Climate Change is not exceded"
         },
         "relative_PB_ADP": {
-            "value": 1e-05,
+            "value": 40.0,
             "unit": "person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded"
         }
     },
     "verbose": {
         "nb_nodes": {
-            "input_value": 1,
-            "used_value": 1,
+            "input_value": 48,
+            "used_value": 48,
             "status": "UNCHANGED"
         },
         "psf": {
-            "input_value": null,
-            "used_value": 1,
-            "status": "SET"
-        },
-        "cpu_usage": {
             "input_value": 1.0,
             "used_value": 1.0,
             "status": "UNCHANGED"
         },
+        "cpu_usage": {
+            "input_value": 1,
+            "used_value": 1,
+            "status": "UNCHANGED"
+        },
         "gpu_usage": {
-            "input_value": 0.0,
-            "used_value": 0.0,
+            "input_value": 1,
+            "used_value": 1,
             "status": "UNCHANGED"
         },
         "average_usage": {
@@ -70,18 +70,18 @@
         },
         "usage": {
             "days_use_time": {
-                "input_value": 0.0,
-                "used_value": 0.0,
+                "input_value": 118.0,
+                "used_value": 118.0,
                 "status": "UNCHANGED"
             },
             "hours_use_time": {
-                "input_value": 0.0,
-                "used_value": 0.0,
+                "input_value": 5.0,
+                "used_value": 5.0,
                 "status": "UNCHANGED"
             },
             "hours_electrical_consumption": {
                 "input_value": null,
-                "used_value": 0.46072,
+                "used_value": 3.842955,
                 "status": "SET"
             },
             "usage_location": {
@@ -105,19 +105,19 @@
                 "status": "SET"
             },
             "dynamic_ratio": {
-                "input_value": 0.0,
-                "used_value": 0.0,
-                "status": "UNCHANGED"
+                "input_value": null,
+                "used_value": 3.0969267139479904,
+                "status": "SET"
             },
             "minute_use_time": {
-                "input_value": 2.0833333333333335,
-                "used_value": 2.0833333333333335,
+                "input_value": 41.0,
+                "used_value": 41.0,
                 "status": "UNCHANGED"
             },
             "dynamic_impact_gwp": {
                 "input_value": null,
                 "used_value": [
-                    0.0008203375555555557,
+                    559.21298208594,
                     3
                 ],
                 "status": "SET"
@@ -125,7 +125,7 @@
             "dynamic_impact_adp": {
                 "input_value": null,
                 "used_value": [
-                    7.774650000000002e-10,
+                    0.0005299873426165499,
                     3
                 ],
                 "status": "SET"
@@ -133,92 +133,96 @@
             "dynamic_impact_pe": {
                 "input_value": null,
                 "used_value": [
-                    0.1805926416666667,
+                    123107.55372012824,
                     3
                 ],
                 "status": "SET"
             },
             "impacts": {
                 "gwp": {
-                    "value": 0.0,
+                    "value": 1730.0,
                     "unit": "kgCO2eq"
                 },
                 "pe": {
-                    "value": 0.0,
+                    "value": 381000.0,
                     "unit": "MJ"
                 },
                 "adp": {
-                    "value": 0.0,
+                    "value": 0.00164,
                     "unit": "kgSbeq"
                 }
             }
         },
+        "dynamic energy consumption": {
+            "value": 10900.0,
+            "unit": "kWh"
+        },
         "embodied impacts": {
             "gwp": {
-                "server": 0.0018,
-                "gpus": 0.002,
+                "server": 7000.0,
+                "gpus": 8000.0,
                 "unit": "kgCO2eq"
             },
             "pe": {
-                "server": 0.022,
-                "gpus": 0.02,
+                "server": 90000.0,
+                "gpus": 100000.0,
                 "unit": "MJ"
             },
             "adp": {
-                "server": 1.3e-07,
-                "gpus": 2e-07,
+                "server": 0.52,
+                "gpus": 0.7,
                 "unit": "kgSbeq"
             }
         },
         "dynamic impacts": {
             "gwp": {
-                "value": 0.00082,
-                "gpus": 0.0,
-                "ram": 0.00034,
-                "cpus": 0.000481,
+                "value": 26800.0,
+                "gpus": 22400.0,
+                "ram": 1350.0,
+                "cpus": 3140.0,
                 "unit": "kgCO2eq"
             },
             "pe": {
-                "value": 0.181,
-                "gpus": 0.0,
-                "ram": 0.0748,
-                "cpus": 0.106,
+                "value": 5910000.0,
+                "gpus": 4920000.0,
+                "ram": 297000.0,
+                "cpus": 692000.0,
                 "unit": "MJ"
             },
             "adp": {
-                "value": 7.77e-10,
-                "gpus": 0.0,
-                "ram": 3.22e-10,
-                "cpus": 4.56e-10,
+                "value": 0.0254,
+                "gpus": 0.0212,
+                "ram": 0.00128,
+                "cpus": 0.00298,
                 "unit": "kgSbeq"
             }
         },
         "manufacture of one server node": {
             "CPU-1": {
                 "unit": 2,
-                "hash": "229effaf7b9357bb732a0bf818a2d816ce483c1f7a79bfc3aae71d15cd2b0de3",
+                "hash": "1c86201482684924b4a1f17963bb9547d4fbbf827982a441b4d6255b123c65a1",
                 "die_size": {
                     "input_value": null,
-                    "used_value": 4.56,
+                    "used_value": 10.64,
                     "status": "SET"
                 },
                 "model": {
-                    "input_value": "Xeon E5-2698 v4",
-                    "used_value": "Xeon E5-2698 v4",
+                    "input_value": "EPYC 7543",
+                    "used_value": "EPYC 7543",
                     "status": "UNCHANGED"
                 },
                 "tdp": {
                     "input_value": null,
-                    "used_value": 135,
+                    "used_value": 225,
                     "status": "SET"
                 },
                 "impacts": {
                     "gwp": {
-                        "value": 36.2,
+                        "value": 60.2,
                         "unit": "kgCO2eq"
                     },
                     "pe": {
-                        "value": 554.0,
+                        "value": 876.0,
                         "unit": "MJ"
                     },
                     "adp": {
@@ -229,10 +233,10 @@
             },
             "RAM-1": {
                 "unit": 1,
-                "hash": "05f20fab521cfc551ec4d5ff4888e0ed7b1cccf43170e03f2234ec6b4c99db1c",
+                "hash": "47c27f3005e66f4e9e37a37249fc33b8fc7abd50335b06a7fd8b3bfd089c60b8",
                 "capacity": {
-                    "input_value": 512,
-                    "used_value": 512,
+                    "input_value": 518,
+                    "used_value": 518,
                     "status": "UNCHANGED"
                 },
                 "density": {
@@ -246,11 +250,34 @@
                         "unit": "kgCO2eq"
                     },
                     "pe": {
-                        "value": 22000.0,
+                        "value": 23000.0,
                         "unit": "MJ"
                     },
                     "adp": {
-                        "value": 0.053,
+                        "value": 0.054,
+                        "unit": "kgSbeq"
+                    }
+                }
+            },
+            "CASE-1": {
+                "unit": 1,
+                "hash": "083dcd17f9997756af73de7c61f0cf2986b25075ad00bbf7c07e08cc80a2183f",
+                "case_type": {
+                    "input_value": "rack",
+                    "used_value": "rack",
+                    "status": "UNCHANGED"
+                },
+                "impacts": {
+                    "gwp": {
+                        "value": 150.0,
+                        "unit": "kgCO2eq"
+                    },
+                    "pe": {
+                        "value": 2200.0,
+                        "unit": "MJ"
+                    },
+                    "adp": {
+                        "value": 0.0202,
                         "unit": "kgSbeq"
                     }
                 }
@@ -341,29 +368,6 @@
                         "unit": "kgSbeq"
                     }
                 }
-            },
-            "CASE-1": {
-                "unit": 1,
-                "hash": "d510a031d97870b128df7e34c32ed8264c7ac8f1786f012cce7f6dbf2a6ffebf",
-                "case_type": {
-                    "input_value": null,
-                    "used_value": "rack",
-                    "status": "SET"
-                },
-                "impacts": {
-                    "gwp": {
-                        "value": 150.0,
-                        "unit": "kgCO2eq"
-                    },
-                    "pe": {
-                        "value": 2200.0,
-                        "unit": "MJ"
-                    },
-                    "adp": {
-                        "value": 0.0202,
-                        "unit": "kgSbeq"
-                    }
-                }
             }
         },
         "manufacture of one gpu": {
@@ -373,13 +377,13 @@
                 "status": "SET"
             },
             "model": {
-                "input_value": "NVIDIA A100 PCIe 80 GB",
-                "used_value": "NVIDIA A100 PCIe 80 GB",
+                "input_value": "NVIDIA A100 SXM4 80 GB",
+                "used_value": "NVIDIA A100 SXM4 80 GB",
                 "status": "UNCHANGED"
             },
             "tdp": {
                 "input_value": null,
-                "used_value": 300,
+                "used_value": 400,
                 "status": "SET"
             },
             "memory_size": {

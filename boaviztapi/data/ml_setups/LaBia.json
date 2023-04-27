@@ -21,7 +21,8 @@
   ],
   "psf": 1,
   "nb_nodes": 1,
-  "cpu_usage_ratio": 1,
+  "cpu_usage": 1,
+    "gpu_usage": 1,  
   "usage": {
     "minute_use_time": 118.04,
     "usage_location": "FRA",

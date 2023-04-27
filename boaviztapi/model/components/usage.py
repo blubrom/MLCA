@@ -202,4 +202,7 @@ class UsageSetup(Usage):
         return super().power_draw()
 
     def energy_consumption(self):
+        return self.hours_electrical_consumption * self.dynamic_ratio * self.get_duration_hours(), DEFAULT_SIG_FIGURES
+
+    def dynamic_energy_consumption(self):
         return self.hours_electrical_consumption * self.get_duration_hours(), DEFAULT_SIG_FIGURES
