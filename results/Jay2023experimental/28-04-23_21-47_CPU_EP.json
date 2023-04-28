@@ -153,6 +153,10 @@
                 }
             }
         },
+        "dynamic energy consumption": {
+            "value": 0.0179,
+            "unit": "kWh"
+        },
         "embodied impacts": {
             "gwp": {
                 "server": 0.002,

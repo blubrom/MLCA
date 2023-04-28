@@ -3,7 +3,7 @@ Experiments for validating our tool :
 first, run the program, we will then be able to send it requests with
 the following command:
 
-pipenv run uvicorn boaviztapi.main:app --host=localhost --port 5000 &
+`pipenv run uvicorn boaviztapi.main:app --host=localhost --port 5000`
 
 this must be realised in another terminal and not in emacs because,
 since it does not terminate, trying to execute it in your emacs would
@@ -19,10 +19,10 @@ import json
 import subprocess
 from datetime import datetime
 
-def run_experiment(model, filename, silent=False):
+def run_experiment(model, filename, directory='../results', silent=False):
   with open("tmp.json", "w") as tmp:
     json.dump(model, tmp)
-  path = "results/" + datetime.now().strftime("%d-%m-%y_%H-%M") + "_" + filename + ".json"
+  path = "results/" + directory + '/' + datetime.now().strftime("%d-%m-%y_%H-%M") + "_" + filename + ".json"
   with open(path, "w") as out:
     request = "curl -X 'POST' 'http://localhost:5000/v1/mlca/?verbose=true' -H 'accept: aplication/json' -H 'Content-Type: application/json' -d @tmp.json"
     results = subprocess.run(request, shell=True, check=True, capture_output=True, text=True)
@@ -51,7 +51,7 @@ def print_gwp_and_energy(results):
     dynamic_energy = results["impacts"]["energy consumption"]
     direct_gwp = results["impacts"]["gwp"]
     print(f"energy consumption: {dynamic_energy}")
-    print(f"dynamic impacts gwp: {dynamic_gwp}")
+    print(f"dynamic impacts gwp: {direct_gwp}")
 #+end_src
 
 #+RESULTS:
@@ -362,17 +362,17 @@ def estimate(model, task, time_server, time_facility):
    print(task)
    print('server')
    segur["usage"][ "minute_use_time"] = time_server
-   output = run_experiment(segur, model + '_' + task + '_Server', silent=True)
+   output = run_experiment(segur, model + '_' + task + '_Server', directory='Bannour2021evaluating', silent=True)
    print_gwp_and_energy(output)
    print('Facility')
    labia["gpu"][0]["model"] = "NVIDIA Tesla V100 PCIe 32 GB"
    labia["usage"][ "minute_use_time"] = time_facility
-   output = run_experiment(labia, model + '_' + task + '_Facility', silent=True)
+   output = run_experiment(labia, model + '_' + task + '_Facility', directory='Bannour2021evaluating', silent=True)
    print_gwp_and_energy(output)
    print('Facility same TDP')
    labia["gpu"][0]["model"] = "NVIDIA A100 PCIe 80 GB"
    labia["usage"][ "minute_use_time"] = time_facility
-   output = run_experiment(labia, model + '_' + task + '_Facility_match_TDP', silent=True)
+   output = run_experiment(labia, model + '_' + task + '_Facility_match_TDP', directory='Bannour2021evaluating', silent=True)
    print_gwp_and_energy(output)
 
 print('Yu2020')
@@ -666,7 +666,7 @@ values to obtain comparable results.
     #+begin_src python :results output :exports both :session
 jean_zay["usage"]["hours_use_time"] = 100
 jean_zay["usage"]["minute_use_time"] = 0
-output = run_experiment(jean_zay, "fine_tuning_SSL")
+output = run_experiment(jean_zay, "fine_tuning_SSL", directory='Dinarelli2022toward')
 print_gwp_and_energy(output)
     #+end_src
 
@@ -686,19 +686,19 @@ close to the 4.729kg CO_2 e and 97.720 kWh presented in the paper.
 print("spectro 3  steps :")
 training_SLU_model['usage']['hours_use_time'] = 36
 training_SLU_model['usage']['minute_use_time'] = 14
-output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_3-steps')
+output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_3-steps',  directory='Dinarelli2022toward')
 print_gwp_and_energy(output)
 
 print("spectro 2  steps :")
 training_SLU_model['usage']['hours_use_time'] = 24
 training_SLU_model['usage']['minute_use_time'] = 14
-output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_2-steps')
+output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_2-steps',  directory='Dinarelli2022toward')
 print_gwp_and_energy(output)
 
 print("spectro 1 step :")
 training_SLU_model['usage']['hours_use_time'] = 15
 training_SLU_model['usage']['minute_use_time'] = 52
-output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_1-step')
+output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_1-step',  directory='Dinarelli2022toward')
 print_gwp_and_energy(output)
     #+end_src
 
@@ -801,7 +801,7 @@ def experiment(model, core_type, benchmark, cpu_usage, gpu_usage, time):
     model['cpu_usage'] = cpu_usage
     model['gpu_usage'] = gpu_usage
     model['usage']['minute_use_time'] = time
-    output = run_experiment(dgx_1_model, f'{core_type}_{benchmark}')
+    output = run_experiment(dgx_1_model, f'{core_type}_{benchmark}', directory='Jay2023experimental')
     s, r = get_energy_joules(output)
     diff ="{:.3f}".format(r - online_tools['Green Algorithm ' + core_type][benchmark])
     print(s, f"difference from expectation: {diff} kJ")
@@ -985,7 +985,7 @@ dgx_1_model['usage']['minute_use_time'] = 0
 def estimate(model, task, time):
    print(model + ": " + task)
    dgx_1_model["usage"][ "hours_use_time"] = time
-   output = run_experiment(dgx_1_model, model + '_' + task, silent=True)
+   output = run_experiment(dgx_1_model, model + '_' + task,  directory='Cattan2022benchmarking', silent=True)
    print_gwp_and_energy(output)
 
 print('MEDIA')
@@ -1325,9 +1325,78 @@ data available in [Cattan2022benchmarking] but that the data from
 
 * estimations from [Strubell2019energy] 
 
+** Information about the hardware configuration
 
-faire des estimations, refaire aussi des estimations du côté du papier
-de Nesrinne. Peut-être discuter un peu avec elle au cas où elle aurait
-une idée de ce qui a pu arriver. Demander à Christophe ou a l'autrice
-principale ce qui s'est passé pour avoir les résultats qui sont
-présentés dans l'article.
+It is described in the paper that estimates are conducted by training
+all models for a maximum of 24h. They use RAPL and NVIDIA System
+Management Interface to measure the average consumption of the CPUs and
+GPUs. 
+All models are trained on one NVIDIA TITAN X except for ELMo
+which is trained on 3 GTX 1080 Ti.
+They then transcribe these results to estimates by using the training
+time given in the paper and the description of the hardware given in
+the paper.
+
+No figures are presented regarding the average consumption of the
+memory, CPU and GPU. We only know about the model of GPU used for
+estimating the consumption. We will therefore not give any value for
+the CPU and ram and run our estimates as is. We will see what results
+we obtain. We would like, not to obtain exact results since it wont be
+possible given the informations missing. Since they use measurement
+tools, we can think that using a modelisation using the TDP will give
+an higher result but since we do not know the quantity of memory used
+and the CPU used, we are not sure that the results will be higher
+(even if we can hypothesize that the CPU average consumption is
+negligible compared to the GPU consumption.)
+
+One reassuring point is that V100, P100 and Titan X GPUs have the same
+TDP so the consumption estimated should make sense.
+
+They use a PUE of 1.58 and a Carbon Intensity of 0.954 pounds CO_2
+e/kWh for American electricity production which is equivalent to
+432.72 g CO_2 e/kWh.
+
+#+begin_src python :results output :exports both :session
+def convert_pounds_kg(x):
+    return  0.453592 * x
+
+print(convert_pounds_kg(.954) * 1000)
+#+end_src
+
+#+RESULTS:
+: 432.726768
+
+** Reproducing figures from table 3
+
+Since there are no estimates given for models trained on TPUs, we will
+in the first time at least ignore these models.
+
+Since table 3 presents the estimated consumption used, we can first
+check the coherency of the table by seeing if we can reproduce the
+same energy consumption by multiplying the power by the training time
+and the PUE
+
+#+begin_src python :results value :exports both
+return list(map(lambda x: 1.58/1000*x, (1415.78*12, 1515.43*84, 517.66*336, 12041.51*79, 1515.43*274120)))
+#+end_src
+
+#+RESULTS:
+| 26.8431888 | 201.12786960000003 | 274.8153408 | 1503.0212782 | 656347.281128 |
+
+We can see that, up to rounding we obtain the same results.
+We can also check that we obtain the same carbon emissions.
+
+#+begin_src python :results value :exports both
+return list(map(lambda x: x*.954, [27,201,275,1507,656347])) 
+#+end_src
+
+#+RESULTS:
+| 25.758 | 191.754 | 262.34999999999997 | 1437.6779999999999 | 626155.038 |
+
+Also the same up to rounding errors
+
+#+begin_src python :results output :exports both :session
+
+#+end_src
+
+#+RESULTS:
