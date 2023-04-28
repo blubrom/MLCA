@@ -72,6 +72,7 @@ We choose a configuration that we know is available in both databases
 - no PUE / dynamic ratio
 - carbon intensity of France is used (51.28 g CO_2 e/kWh)
 
+We are using Green Algorithms v2.2
 for an expected result of 196.32g of CO_2 e and 3.83 kWh of dynamic
 consumption (this [[http://calculator.green-algorithms.org//?runTime_hour=12&runTime_min=0&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=4&CPUmodel=A8-7680&numberGPUs=1&GPUmodel=NVIDIA%20GTX%201080%20Ti&memory=64&platformType=localServer][link]] should in theory get you to the page with this
 exact setup and results but it seems like GA is kind of broken right
@@ -272,15 +273,14 @@ information about the Skylake architecture from [[https://en.wikichip.org/wiki/i
 ** Problems with the provided data
 
 *** incoherences between tables 3 and 4
-les résultats affichés dans le papier ne sont pas cohérent d'un
-tableau à l'autre. Si on essaie de passer des valeurs de consommation
-d'énergie (pour GA au moins) avec le facteur d'intensité carbone
-indiqué, on ne retombe pas du tout sur les émissions de carbone
-indiquées.
 
-Par exemple : pour French Press, server: il est indiqué 1.38 kWh et
-dans la section 4.2 il est indiqué 39 gCO_2 e/kWh comme intensité
-carbone utilisée.
+Results presented in the paper do not seem coherent from one table to
+the other. If we try to convert from energy consumption to carbon
+emissions using the presented carbon intensity of 39 gCO_2 e/kWh we do
+not at all find the same results as the ones presented.
+For instance, for the first method (Yu2020) for the French Press
+benchmark, it is indicated 1.38kWh consumption and 350.15g CO_2 e.
+
 #+begin_src python :results output :exports both
 print(39*1.38)
 #+end_src
@@ -288,77 +288,202 @@ print(39*1.38)
 #+RESULTS:
 : 53.81999999999999
 
-on obtient 53.8g alors que dans la table 3, il est indiqué 350g pour
-cette même expérience.
+We can see that if we are to use the presented carbon intensity, we
+get emissions of 53.8g for the 1.38kWh. This is really far from what
+is presented in the paper.
 
-*** Not being able to find the same energy consumption using the same formula
+*** Trying to understand the problem
 
-An NVIDIA Tesla V100 as a TDP of 250W, therefore, if used for 2 hours,
-we would expect an energy consumption of 500Wh 
-
-However, in the paper, this consumption is estimated at a little more
-than 1kWh + 32*.37W * 2 = 23Wh for the memory
+Let us check if the factor to convert from table 4 to table 3 is
+constant.
+If it is, it would maybe explain the problems. When filling the table
+the authors might have missclicked on the location and the Carbon
+Intensity used would just be the one of another country.
 
 #+begin_src python :results output :exports both
-print(32*.37)
-print((500 + 11.84) * 118/60) 
+import numpy as np
+emissions = [350.15,260.26,16.67,14.31,20.68,20.03,104.4,102.08,3.83,4.99,5.57,5.67]
+energy = [1.38,1.03,0.07,0.06,0.08,0.08,0.41,0.40,.02,.02,.02,.02]
+CI = [em / en for en, em in zip(energy, emissions)]
+print(CI, np.mean(CI))
+
 #+end_src
 
 #+RESULTS:
-: 11.84
-: 1006.6186666666666
+: [253.73188405797103, 252.6796116504854, 238.14285714285714, 238.50000000000003, 258.5, 250.375, 254.63414634146343, 255.2, 191.5, 249.5, 278.5, 283.5] 250.39695826606476
 
-We can see that If we were to assume the usage of two GPUs, we would
-obtain an estimate of 1.006 kWh, that is close to the 1.03kWh
-estimated for French Press on the Facility but not exactly the same
-value.
-This is the closest explaination of the results I am able to formulate
-while still not being exact
+according to GA's v2.2 database, this carbon intensity of around 250gCO_2
+e/kWh would approximately correspond to Lithuania's one. According to
+the version 1.1 of the data (version seemingly used in the article),
+the closest one would be Hungary.
+
+Still, we can observe quite important variations in carbon intensity
+to convert from the presented energy consumption to the presented
+carbon emissions.
 
 ** experiments
+It is said that the default PUE used is 1.67. In order to replicate
+the results, and even if the dynamic ratio and the PUE do not have the
+same meaning. Since they are both used in the same way we will use a
+dynamic ratio of 1.67
 
-#+begin_src shell :results output :exports both
-curl -X 'POST' \
-  'http://localhost:5000/v1/mlca/?verbose=true' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "server": {
-    "configuration": {
-      "cpu": {
-        "units": 2,
-        "model": "Xeon Gold 6148"
-      },
-      "ram": [
-        {
-          "units": 1,
-          "capacity": 32
-        }
-      ]
-    }
-  },
-  "gpu": [
-    {
-      "units": 4,
-      "model": "NVIDIA Tesla V100 PCIe 32 GB"
-    }
-  ],
-  "psf": 1,
-  "nb_nodes": 1,
-  "cpu_usage_ratio": 0,
-  "usage": {
-    "minute_use_time": 118.04,
-    "usage_location": "FRA",
-    "gwp_factor": 39E-3
-  }
-}'
+we can see in [[https://github.com/GreenAlgorithms/green-algorithms-tool/blob/master/data/latest/TDP_gpu.csv][the latest version of Green Algorithms' GPU TDP database]]
+that they have a TDP value of 300W for a Tesla V100 GPU whereas we
+have a TDP of 250W for the same card in our database. In order to see
+if we can replicate the same consumption and see the difference
+resulting from this data-point incoherency we will try two
+versions. One with a V100 and one with a card with a TDP
+of 300W in our database: the NVIDIA A100 PCIe 80 GB. This will of
+course also impact the manufacture impacts but we are here only focusing on
+reproducing the same direct impacts
+
+
+#+begin_src python :results output :exports both :session
+with open("boaviztapi/data/ml_setups/LaBia.json", 'r') as m:
+    labia = json.load(m)
+with open("boaviztapi/data/ml_setups/Segur.json", 'r') as m:
+    segur = json.load(m)
+
+labia["server"]["configuration"]["ram"][0]["capacity"] = 32
+
+labia["gpu"][0]['units'] = 1
+segur["gpu"][0]['units'] = 1
+
+labia["cpu_usage"] = 0
+segur["cpu_usage"] = 0
+
+labia['usage']['gwp_factor'] = 39E-3
+segur['usage']['gwp_factor'] = 39E-3
+
+labia['usage']['dynamic_ratio'] = 1.67
+segur['usage']['dynamic_ratio'] = 1.67
+
+def estimate(model, task, time_server, time_facility):
+   print(task)
+   print('server')
+   segur["usage"][ "minute_use_time"] = time_server
+   output = run_experiment(segur, model + '_' + task + '_Server', silent=True)
+   print_gwp_and_energy(output)
+   print('Facility')
+   labia["gpu"][0]["model"] = "NVIDIA Tesla V100 PCIe 32 GB"
+   labia["usage"][ "minute_use_time"] = time_facility
+   output = run_experiment(labia, model + '_' + task + '_Facility', silent=True)
+   print_gwp_and_energy(output)
+   print('Facility same TDP')
+   labia["gpu"][0]["model"] = "NVIDIA A100 PCIe 80 GB"
+   labia["usage"][ "minute_use_time"] = time_facility
+   output = run_experiment(labia, model + '_' + task + '_Facility_match_TDP', silent=True)
+   print_gwp_and_energy(output)
+
+print('Yu2020')
+estimate("Yu2020", "French Press", 163 + 39/60, 118 + 4/60)
+estimate("Yu2020", "EMEA", 9 + 31/60, 6 + 51/60)
+estimate("Yu2020", "MEDLINE", 11 + 55/60, 9 + 11/60)
+
+print('\nMa2016')
+estimate("Ma2016", "French Press", 58 + 30/60, 46 + 44/60)
+estimate("Ma2016", "EMEA", 2 + 14/60, 2 + 27/60)
+estimate("Ma2016", "MEDLINE", 3 + 11/60, 2 + 58/60)  
 #+end_src
 
 #+RESULTS:
-: {"impacts":{"gwp":{"embodied":0.05,"direct":0.312,"total":0.4,"unit":"kgCO2eq"},"pe":{"embodied":0.7,"direct":90.2,"total":90.0,"unit":"MJ"},"adp":{"embodied":1e-05,"direct":3.88e-07,"total":1e-05,"unit":"kgSbeq"},"energy consumption":{"value":2.58,"unit":"kWh"}},"perspective":{"relative_SNBC":{"value":0.0002,"unit":"Emissions of X Person per year in the \"Stratégie Nationale Bas Carbone (SNBC)\" sustanability objectives for France"},"relative_PB_Climate_Change":{"value":0.0004,"unit":"person in a scenario where the Planetary Boundary for Climate Change is not exceded"},"relative_PB_ADP":{"value":0.0003,"unit":"person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded"}},"verbose":{"nb_nodes":{"input_value":1,"used_value":1,"status":"UNCHANGED"},"psf":{"input_value":1.0,"used_value":1.0,"status":"UNCHANGED"},"cpu_usage":{"input_value":1,"used_value":1,"status":"UNCHANGED"},"gpu_usage":{"input_value":1,"used_value":1,"status":"UNCHANGED"},"average_usage":{"input_value":null,"used_value":0.85,"status":"SET"},"hardware_replacement_rate":{"input_value":null,"used_value":6,"status":"SET"},"usage":{"years_use_time":{"input_value":null,"used_value":0,"status":"SET"},"hours_electrical_consumption":{"input_value":null,"used_value":1.31192,"status":"SET"},"usage_location":{"input_value":"FRA","used_value":"FRA","status":"UNCHANGED"},"gwp_factor":{"input_value":0.039,"used_value":0.039,"status":"UNCHANGED"},"pe_factor":{"input_value":null,"used_value":11.289,"status":"SET"},"adp_factor":{"input_value":null,"used_value":4.86e-08,"status":"SET"},"dynamic_ratio":{"input_value":null,"used_value":3.0969267139479904,"status":"SET"},"minute_use_time":{"input_value":118.04,"used_value":118.04,"status":"UNCHANGED"},"dynamic_impact_gwp":{"input_value":null,"used_value":[0.10065837392,3],"status":"SET"},"dynamic_impact_adp":{"input_value":null,"used_value":[1.25435819808e-07,3],"status":"SET"},"dynamic_impact_pe":{"input_value":null,"used_value":[29.13672777392,3],"status":"SET"},"impacts":{"gwp":{"value":0.312,"unit":"kgCO2eq"},"pe":{"value":90.2,"unit":"MJ"},"adp":{"value":3.88e-07,"unit":"kgSbeq"}}},"embodied impacts":{"gwp":{"server":0.026,"gpus":0.03,"unit":"kgCO2eq"},"pe":{"server":0.35,"gpus":0.3,"unit":"MJ"},"adp":{"server":5.3e-06,"gpus":4e-06,"unit":"kgSbeq"}},"dynamic impacts":{"gwp":{"value":0.101,"gpus":0.0767,"ram":0.000915,"cpus":0.023,"unit":"kgCO2eq"},"pe":{"value":29.1,"gpus":22.2,"ram":0.265,"cpus":6.66,"unit":"MJ"},"adp":{"value":1.25e-07,"gpus":9.56e-08,"ram":1.14e-09,"cpus":2.87e-08,"unit":"kgSbeq"}},"manufacture of one server node":{"CPU-1":{"unit":2,"hash":"e9fb3b5d6c10d5704f77b5ceb8b83db4da55d51793389f5c5d1ac968decb6146","die_size":{"input_value":null,"used_value":6.94,"status":"SET"},"model":{"input_value":"Xeon Gold 6148","used_value":"Xeon Gold 6148","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":150,"status":"SET"},"impacts":{"gwp":{"value":45.6,"unit":"kgCO2eq"},"pe":{"value":680.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":1,"hash":"a34b138e4ee0b4c832576fe84c3ef50c4e9713ab83fe8269fdc4dbacfd382efb","capacity":{"input_value":32,"used_value":32,"status":"UNCHANGED"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":120.0,"unit":"kgCO2eq"},"pe":{"value":1500.0,"unit":"MJ"},"adp":{"value":0.0049,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"cb269039943b145f924c394acd2f665c10b23bddf954428af81bd8eccaff3d6a","capacity":{"input_value":null,"used_value":1000,"status":"SET"},"density":{"input_value":null,"used_value":48.5,"status":"SET"},"impacts":{"gwp":{"value":52.0,"unit":"kgCO2eq"},"pe":{"value":640.0,"unit":"MJ"},"adp":{"value":0.0019,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"be84aabaaac41126e1bd93ec3c10b355c6c7534cf9e3d7337cef9d6d0bb116c6","unit_weight":{"input_value":null,"used_value":2.99,"status":"SET"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"d510a031d97870b128df7e34c32ed8264c7ac8f1786f012cce7f6dbf2a6ffebf","case_type":{"input_value":null,"used_value":"rack","status":"SET"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}}},"manufacture of one gpu":{"die_size":{"input_value":null,"used_value":8.15,"status":"SET"},"model":{"input_value":"NVIDIA Tesla V100 PCIe 32 GB","used_value":"NVIDIA Tesla V100 PCIe 32 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":250,"status":"SET"},"memory_size":{"input_value":null,"used_value":32,"status":"SET"},"memory":{"capacity":{"input_value":null,"used_value":32,"status":"SET"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":120.0,"unit":"kgCO2eq"},"pe":{"value":1500.0,"unit":"MJ"},"adp":{"value":0.0049,"unit":"kgSbeq"}}},"impacts":{"gwp":{"value":100.0,"unit":"kgCO2eq"},"pe":{"value":2000.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}}
+#+begin_example
+Yu2020
+French Press
+server
+energy consumption: {'value': 1.16, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.03, 'direct': 0.0451, 'total': 0.08, 'unit': 'kgCO2eq'}
+Facility
+energy consumption: {'value': 0.861, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.03, 'direct': 0.0336, 'total': 0.07, 'unit': 'kgCO2eq'}
+Facility same TDP
+energy consumption: {'value': 1.03, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.04, 'direct': 0.04, 'total': 0.08, 'unit': 'kgCO2eq'}
+EMEA
+server
+energy consumption: {'value': 0.0673, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.002, 'direct': 0.00262, 'total': 0.005, 'unit': 'kgCO2eq'}
+Facility
+energy consumption: {'value': 0.0499, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.002, 'direct': 0.00195, 'total': 0.004, 'unit': 'kgCO2eq'}
+Facility same TDP
+energy consumption: {'value': 0.0595, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.002, 'direct': 0.00232, 'total': 0.005, 'unit': 'kgCO2eq'}
+MEDLINE
+server
+energy consumption: {'value': 0.0843, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.002, 'direct': 0.00329, 'total': 0.006, 'unit': 'kgCO2eq'}
+Facility
+energy consumption: {'value': 0.0669, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.002, 'direct': 0.00261, 'total': 0.005, 'unit': 'kgCO2eq'}
+Facility same TDP
+energy consumption: {'value': 0.0797, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.003, 'direct': 0.00311, 'total': 0.006, 'unit': 'kgCO2eq'}
 
-: #+RESULTS:{"impacts":{"gwp":{"embodied":0.05,"direct":0.24,"total":0.3,"unit":"kgCO2eq"},"pe":{"embodied":0.7,"direct":69.6,"total":70.0,"unit":"MJ"},"adp":{"embodied":1e-05,"direct":3e-07,"total":1e-05,"unit":"kgSbeq"},"energy consumption":{"value":1.99,"unit":"kWh"}},"perspective":{"relative_SNBC":{"value":0.0001,"unit":"Emissions of X Person per year in the \"Stratégie Nationale Bas Carbone (SNBC)\" sustanability objectives for France"},"relative_PB_Climate_Change":{"value":0.0003,"unit":"person in a scenario where the Planetary Boundary for Climate Change is not exceded"},"relative_PB_ADP":{"value":0.0003,"unit":"person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded"}},"verbose":{"usage":{"years_use_time":{"input_value":null,"used_value":0,"status":"SET"},"hours_electrical_consumption":{"input_value":null,"used_value":1.01192,"status":"SET"},"usage_location":{"input_value":"FRA","used_value":"FRA","status":"UNCHANGED"},"gwp_factor":{"input_value":0.039,"used_value":0.039,"status":"UNCHANGED"},"pe_factor":{"input_value":null,"used_value":11.289,"status":"SET"},"adp_factor":{"input_value":null,"used_value":4.86e-08,"status":"SET"},"dynamic_ratio":{"input_value":null,"used_value":3.0969267139479904,"status":"SET"},"minute_use_time":{"input_value":118.04,"used_value":118.04,"status":"UNCHANGED"},"dynamic_impact_gwp":{"input_value":null,"used_value":[0.07764057392,3],"status":"SET"},"dynamic_impact_adp":{"input_value":null,"used_value":[9.6752099808e-08,3],"status":"SET"},"dynamic_impact_pe":{"input_value":null,"used_value":[22.47395997392,3],"status":"SET"},"impacts":{"gwp":{"value":0.24,"unit":"kgCO2eq"},"pe":{"value":69.6,"unit":"MJ"},"adp":{"value":3e-07,"unit":"kgSbeq"}}},"embodied impacts":{"gwp":{"server":0.026,"gpus":0.03,"unit":"kgCO2eq"},"pe":{"server":0.35,"gpus":0.3,"unit":"MJ"},"adp":{"server":5.3e-06,"gpus":4e-06,"unit":"kgSbeq"}},"dynamic impacts":{"gwp":{"value":0.0776,"gpus":0.0767,"ram":0.000915,"cpus":0.0,"unit":"kgCO2eq"},"pe":{"value":22.5,"gpus":22.2,"ram":0.265,"cpus":0.0,"unit":"MJ"},"adp":{"value":9.68e-08,"gpus":9.56e-08,"ram":1.14e-09,"cpus":0.0,"unit":"kgSbeq"}},"manufacture of one server node":{"CPU-1":{"unit":2,"hash":"e9fb3b5d6c10d5704f77b5ceb8b83db4da55d51793389f5c5d1ac968decb6146","die_size":{"input_value":null,"used_value":6.94,"status":"SET"},"model":{"input_value":"Xeon Gold 6148","used_value":"Xeon Gold 6148","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":150,"status":"SET"},"impacts":{"gwp":{"value":45.6,"unit":"kgCO2eq"},"pe":{"value":680.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":1,"hash":"a34b138e4ee0b4c832576fe84c3ef50c4e9713ab83fe8269fdc4dbacfd382efb","capacity":{"input_value":32,"used_value":32,"status":"UNCHANGED"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":120.0,"unit":"kgCO2eq"},"pe":{"value":1500.0,"unit":"MJ"},"adp":{"value":0.0049,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"cb269039943b145f924c394acd2f665c10b23bddf954428af81bd8eccaff3d6a","capacity":{"input_value":null,"used_value":1000,"status":"SET"},"density":{"input_value":null,"used_value":48.5,"status":"SET"},"impacts":{"gwp":{"value":52.0,"unit":"kgCO2eq"},"pe":{"value":640.0,"unit":"MJ"},"adp":{"value":0.0019,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"be84aabaaac41126e1bd93ec3c10b355c6c7534cf9e3d7337cef9d6d0bb116c6","unit_weight":{"input_value":null,"used_value":2.99,"status":"SET"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"d510a031d97870b128df7e34c32ed8264c7ac8f1786f012cce7f6dbf2a6ffebf","case_type":{"input_value":null,"used_value":"rack","status":"SET"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}}},"manufacture of one gpu":{"die_size":{"input_value":null,"used_value":8.15,"status":"SET"},"model":{"input_value":"NVIDIA Tesla V100 PCIe 32 GB","used_value":"NVIDIA Tesla V100 PCIe 32 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":250,"status":"SET"},"memory_size":{"input_value":null,"used_value":32,"status":"SET"},"memory":{"capacity":{"input_value":null,"used_value":32,"status":"SET"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":120.0,"unit":"kgCO2eq"},"pe":{"value":1500.0,"unit":"MJ"},"adp":{"value":0.0049,"unit":"kgSbeq"}}},"impacts":{"gwp":{"value":100.0,"unit":"kgCO2eq"},"pe":{"value":2000.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}}
+Ma2016
+French Press
+server
+energy consumption: {'value': 0.414, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.01, 'direct': 0.0161, 'total': 0.03, 'unit': 'kgCO2eq'}
+Facility
+energy consumption: {'value': 0.341, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.01, 'direct': 0.0133, 'total': 0.03, 'unit': 'kgCO2eq'}
+Facility same TDP
+energy consumption: {'value': 0.406, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.02, 'direct': 0.0158, 'total': 0.03, 'unit': 'kgCO2eq'}
+EMEA
+server
+energy consumption: {'value': 0.0158, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.0005, 'direct': 0.000616, 'total': 0.001, 'unit': 'kgCO2eq'}
+Facility
+energy consumption: {'value': 0.0179, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.0007, 'direct': 0.000697, 'total': 0.001, 'unit': 'kgCO2eq'}
+Facility same TDP
+energy consumption: {'value': 0.0213, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.0008, 'direct': 0.00083, 'total': 0.002, 'unit': 'kgCO2eq'}
+MEDLINE
+server
+energy consumption: {'value': 0.0225, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.0007, 'direct': 0.000878, 'total': 0.002, 'unit': 'kgCO2eq'}
+Facility
+energy consumption: {'value': 0.0216, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.0008, 'direct': 0.000843, 'total': 0.002, 'unit': 'kgCO2eq'}
+Facility same TDP
+energy consumption: {'value': 0.0258, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 0.001, 'direct': 0.001, 'total': 0.002, 'unit': 'kgCO2eq'}
+#+end_example
 
+
+we obtain the following results :
+
+| Method | Task         | Hardware | Expected Energy | Estimated energy | Estimation trying to match | Expected Carbon | Estimated Carbon | Estimation trying to match |
+|        |              |          |           (kWh) |            (kWh) |       Facility only, (kWh) |       (g CO_2 e) |        (g CO_2 e) |       Facility only, (kWh) |
+|--------+--------------+----------+-----------------+------------------+----------------------------+-----------------+------------------+----------------------------|
+| Yu2020 | French Press | Server   |            1.38 |             1.16 |                            |          350.15 |               45 |                            |
+|        |              | Facility |            1.03 |           0 .861 |                       1.03 |          260.26 |               33 |                         40 |
+|        | EMEA         | Server   |            0.07 |            0.067 |                            |           16.67 |             2.62 |                            |
+|        |              | Facility |            0.06 |           0.0499 |                     0.0595 |           14.31 |             1.95 |                       2.32 |
+|        | MEDLINE      | Server   |            0.08 |           0.0843 |                            |           20.68 |             3.29 |                            |
+|        |              | Facility |            0.08 |           0.0669 |                     0.0797 |           20.03 |             2.61 |                       3.11 |
+|--------+--------------+----------+-----------------+------------------+----------------------------+-----------------+------------------+----------------------------|
+| Ma2016 | French Press | Server   |            0.41 |            0.414 |                            |           104.4 |             16.1 |                            |
+|        |              | Facility |            0.40 |            0.341 |                      0.406 |          102.08 |             13.3 |                       15.8 |
+|        | EMEA         | Server   |            0.02 |           0.0158 |                            |            3.83 |            0.616 |                            |
+|        |              | Facility |            0.02 |           0.0179 |                     0.0225 |            4.99 |            0.697 |                       0.83 |
+|        | MEDLINE      | Server   |            0.02 |           0.0225 |                            |            5.57 |            0.878 |                            |
+|        |              | Facility |            0.02 |           0.0216 |                     0.0258 |            5.67 |            0.843 |                          1 |
+
+We can see that we are able to obtain the same exact consumption
+estimates up to rounding (when we do the modifications to the inputed setup for the
+facility) except for Yu2020, French Press, Server where we have a
+slightly lower estimation than the one proposed in the paper.
+We can also see that, as expected, the estimates we do when
+considering the "real" setup are lower than the ones presented in the
+paper and this can be entirely explained by the difference in TDP in
+the database.
+We can also conclude that the problem in the presented data lies in
+the estimates of the carbon footprint and not in the estimates of
+energy consumption.
 
 
 * replicating results from [Dinarelli2022toward]
@@ -1206,10 +1331,3 @@ de Nesrinne. Peut-être discuter un peu avec elle au cas où elle aurait
 une idée de ce qui a pu arriver. Demander à Christophe ou a l'autrice
 principale ce qui s'est passé pour avoir les résultats qui sont
 présentés dans l'article.
-
-#+begin_src python :results output :exports both
-print(8*3500*1.58/1000)
-#+end_src
-
-#+RESULTS:
-: 44.24
