@@ -1581,3 +1581,66 @@ two things: the used Carbon Intensity for the USA in the base values
 is 370gCO_2 e/kWh instead of the 432gCO_2 e/kWh when trying to match.
 The dynamic ratio is roughly twice as high when using the base value
 compared to using the indicated PUE.
+
+#+begin_src python :results value :exports both
+return(5/.12, 118/.12, 9870/.12)
+#+end_src
+
+#+RESULTS:
+| 41.66666666666667 | 983.3333333333334 | 82250.0 |
+
+To complement the case study on hyperparameter search and costs not
+only on training one model but of the whole process, let us try and
+reproduce similar results, which we would be able to study also in
+terms of the other impacts estimated by our tool.
+
+#+begin_src python :results output :exports both :session
+model = {
+"server": {
+    "configuration":{
+        "ram": [
+            {
+                "units" : 0
+            }
+        ]
+    }
+},
+"gpu": [
+    {
+        "units": 1,
+        "model": "NVIDIA GTX TITAN X"
+    }
+],
+"psf": 1,
+"nb_nodes": 1,
+"cpu_usage": 0,
+"gpu_usage": 1,
+"usage": {
+  "hours_use_time": 0,
+  "usage_location": "USA",
+}
+}
+
+def estimate(time, name):
+    model["usage"]["hours_use_time"] = time
+    output = run_experiment(model, name, "Strubell2019energy")
+    energy = output["impacts"]["energy consumption"]["value"]
+    cost = energy *.12
+    print(f"Direct energy consumption: {energy} kWh, translates to a cost of {cost:2f} $")
+
+
+estimate(120, "training_one_model")
+estimate(2880, "24_jobs")
+estimate(239942, "4789_jobs")
+#+end_src
+
+#+RESULTS:
+: estimated impacts: {'gwp': {'embodied': 1.7, 'direct': 36.0, 'total': 38.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 23.0, 'direct': 1110.0, 'total': 1100.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.00039, 'direct': 9.6e-06, 'total': 0.0004, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 97.3, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 0.019, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.038, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.013, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: Direct energy consumption: 97.3 kWh, translates to a cost of 11.676000 $
+: estimated impacts: {'gwp': {'embodied': 41.0, 'direct': 864.0, 'total': 910.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 560.0, 'direct': 26500.0, 'total': 27000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0093, 'direct': 0.00023, 'total': 0.0095, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 2340.0, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 0.45, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.92, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.3, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: Direct energy consumption: 2340.0 kWh, translates to a cost of 280.800000 $
+: estimated impacts: {'gwp': {'embodied': 3400.0, 'direct': 72000.0, 'total': 75000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 46000.0, 'direct': 2210000.0, 'total': 2300000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.78, 'direct': 0.0192, 'total': 0.79, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 195000.0, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 38.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 77.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 25.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: Direct energy consumption: 195000.0 kWh, translates to a cost of 23400.000000 $
