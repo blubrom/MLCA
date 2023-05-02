@@ -575,7 +575,7 @@ number of cores: 20
 die size: 694 mm² (XCC configuration)
 
 #+begin_src python :results output :exports both :session
-jean_zay = model
+jean_zay = copy.deepcopy(model)
 jean_zay["server"]["configuration"] = {
     "cpu": {
       "units": 2,
@@ -611,7 +611,7 @@ default values of our tool to complete the missing pieces of information
 
     #+begin_src python :results output :exports both :session
 
-training_SLU_model = model
+training_SLU_model = copy.deepcopy(model)
 training_SLU_model["gpu"] = [
   {
     "units": 1,
@@ -671,63 +671,61 @@ print_gwp_and_energy(output)
     #+end_src
 
     #+RESULTS:
-    : estimated impacts: {'gwp': {'embodied': 2.0, 'direct': 1.43, 'total': 3.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 30.0, 'direct': 316.0, 'total': 300.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0004, 'direct': 1.36e-06, 'total': 0.0004, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 28.0, 'unit': 'kWh'}}
-    : to put impacts in perspective: {'relative_SNBC': {'value': 0.002, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.003, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.01, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-    : energy consumption: {'value': 28.0, 'unit': 'kWh'}
-    : dynamic impacts gwp: {'embodied': 2.0, 'direct': 1.43, 'total': 3.0, 'unit': 'kgCO2eq'}
+    : estimated impacts: {'gwp': {'embodied': 4.0, 'direct': 5.46, 'total': 9.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 50.0, 'direct': 1210.0, 'total': 1000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0005, 'direct': 5.21e-06, 'total': 0.0005, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 107.0, 'unit': 'kWh'}}
+    : to put impacts in perspective: {'relative_SNBC': {'value': 0.005, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.009, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.02, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+    : energy consumption: {'value': 107.0, 'unit': 'kWh'}
+    : dynamic impacts gwp: {'embodied': 4.0, 'direct': 5.46, 'total': 9.0, 'unit': 'kgCO2eq'}
 
-We can see that we obtain an estimate of 4.85kg CO_2 e for the direct
-impacts and a dynamic consumption of 95.2 kWh, which is really
-close to the 4.729kg CO_2 e and 97.720 kWh presented in the paper.
+We can see that we obtain an estimate of 5.46kg CO_2 e for the direct
+impacts and a dynamic consumption of 107 kWh, which is close to the
+4.729kg CO_2 e and 97.720 kWh presented in the paper. The fact that
+results aren't a perfect match and slightly higher than presented can
+be explained by the fact that measures presented were carried out
+based on a measurement tool (CarbonTracker). (results presented are
+borrowed from [Evain2021task] using the methodology from [parcollet2021energy])
 
 *** Table 1
 
     #+begin_src python :results output :exports both :session
-print("spectro 3  steps :")
-training_SLU_model['usage']['hours_use_time'] = 36
-training_SLU_model['usage']['minute_use_time'] = 14
-output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_3-steps',  directory='Dinarelli2022toward')
-print_gwp_and_energy(output)
+def estimate(steps, hours, minutes):
+    print(f"spectro {steps} steps :")
+    training_SLU_model['usage']['hours_use_time'] = hours
+    training_SLU_model['usage']['minute_use_time'] = minutes
+    output = run_experiment(training_SLU_model, f'PortMEDIA_spectro_{steps}-steps',  directory='Dinarelli2022toward')
+    print_gwp_and_energy(output)
 
-print("spectro 2  steps :")
-training_SLU_model['usage']['hours_use_time'] = 24
-training_SLU_model['usage']['minute_use_time'] = 14
-output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_2-steps',  directory='Dinarelli2022toward')
-print_gwp_and_energy(output)
+estimate(3,36,14)
+estimate(2,24,14)
+estimate(1,15,52)
 
-print("spectro 1 step :")
-training_SLU_model['usage']['hours_use_time'] = 15
-training_SLU_model['usage']['minute_use_time'] = 52
-output = run_experiment(training_SLU_model, 'PortMEDIA_spectro_1-step',  directory='Dinarelli2022toward')
-print_gwp_and_energy(output)
     #+end_src
 
     #+RESULTS:
     #+begin_example
-    spectro 3  steps :
+    spectro 3 steps :
     estimated impacts: {'gwp': {'embodied': 0.7, 'direct': 0.517, 'total': 1.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 9.0, 'direct': 114.0, 'total': 100.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0001, 'direct': 4.93e-07, 'total': 0.0001, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 10.1, 'unit': 'kWh'}}
     to put impacts in perspective: {'relative_SNBC': {'value': 0.0006, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.001, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.004, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
     energy consumption: {'value': 10.1, 'unit': 'kWh'}
     dynamic impacts gwp: {'embodied': 0.7, 'direct': 0.517, 'total': 1.0, 'unit': 'kgCO2eq'}
-    spectro 2  steps :
+    spectro 2 steps :
     estimated impacts: {'gwp': {'embodied': 0.5, 'direct': 0.346, 'total': 0.8, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 6.0, 'direct': 76.5, 'total': 80.0, 'unit': 'MJ'}, 'adp': {'embodied': 9e-05, 'direct': 3.3e-07, 'total': 9e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 6.78, 'unit': 'kWh'}}
     to put impacts in perspective: {'relative_SNBC': {'value': 0.0004, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.0008, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.003, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
     energy consumption: {'value': 6.78, 'unit': 'kWh'}
     dynamic impacts gwp: {'embodied': 0.5, 'direct': 0.346, 'total': 0.8, 'unit': 'kgCO2eq'}
-    spectro 1 step :
+    spectro 1 steps :
     estimated impacts: {'gwp': {'embodied': 0.3, 'direct': 0.226, 'total': 0.5, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 4.0, 'direct': 50.1, 'total': 50.0, 'unit': 'MJ'}, 'adp': {'embodied': 6e-05, 'direct': 2.16e-07, 'total': 6e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 4.44, 'unit': 'kWh'}}
     to put impacts in perspective: {'relative_SNBC': {'value': 0.0003, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.0005, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.002, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
     energy consumption: {'value': 4.44, 'unit': 'kWh'}
     dynamic impacts gwp: {'embodied': 0.3, 'direct': 0.226, 'total': 0.5, 'unit': 'kgCO2eq'}
     #+end_example
 We obtain the following results :
-- spectro 3 steps: 14.8kWh, 757g CO_2 e (vs 4.473kWh and 228gCO_2 e in
+- spectro 3 steps: 10.1kWh, 517g CO_2 e (vs 4.473kWh and 228gCO_2 e in
   the paper)
-- spectro 2 steps: 9.93kWh, 506g CO_2 e (vs 2.989kWh and 152gCO_2 e in
+- spectro 2 steps: 6.78kWh, 346g CO_2 e (vs 2.989kWh and 152gCO_2 e in
   the paper)
-- spectro 1 step: 6.5kWh, 322g CO_2 e (vs 1.708kWh and 87gCO_2 e in
+- spectro 1 step: 4.44kWh, 226g CO_2 e (vs 1.708kWh and 87gCO_2 e in
   the paper)
-We can see that we obtain carbon emission estimates around 4 times higher than
+We can see that we obtain carbon emission estimates around 3 times higher than
 those presented in the paper. It is expected that we obtain higher
 estimates than the measurements as presented in [Jay2023experimental]
 
@@ -1350,7 +1348,7 @@ and the CPU used, we are not sure that the results will be higher
 (even if we can hypothesize that the CPU average consumption is
 negligible compared to the GPU consumption.)
 
-One reassuring point is that V100, P100 and Titan X GPUs have the same
+One reassuring point is that CTX 1080 Ti, V100, P100 and Titan X GPUs have the same
 TDP so the consumption estimated should make sense.
 
 They use a PUE of 1.58 and a Carbon Intensity of 0.954 pounds CO_2
@@ -1427,7 +1425,8 @@ return [
 | NAS             |      2000 |  1515.43 |
 
 We can see that, as expected since the provided consumption result
-from using measurement tools, the estimated consumption is bigger than
+from using measurement tools, the estimated consumption is bigger
+(approximately + 1/3) than
 the measured consumption. Still, it remains in the same order of magnitude
 
 #+begin_src python :results output :exports both :session
@@ -1486,7 +1485,7 @@ def estimates(model, task):
     estimate(model, task, "NAS", 8, 274120)
     model["gpu"] = [{
         "units": 3,
-        "model": "NVIDIA GeForce GTX 1080"
+        "model": "NVIDIA GeForce GTX 1080 Ti"
     }]
     estimate(model, task, "ELMo", 3, 336)
 
@@ -1525,11 +1524,11 @@ energy consumption: {'value': 871000.0, 'unit': 'kWh'}
 dynamic impacts gwp: {'embodied': 7000.0, 'direct': 377000.0, 'total': 400000.0, 'unit': 'kgCO2eq'}
 direct gwp: 831143.41 lbs
 ELMo
-estimated impacts: {'gwp': {'embodied': 5.0, 'direct': 127.0, 'total': 100.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 70.0, 'direct': 3330.0, 'total': 3000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.001, 'direct': 2.89e-05, 'total': 0.001, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 293.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.07, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.1, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: {'value': 293.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 5.0, 'direct': 127.0, 'total': 100.0, 'unit': 'kgCO2eq'}
-direct gwp: 279.99 lbs
+estimated impacts: {'gwp': {'embodied': 6.0, 'direct': 175.0, 'total': 200.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 80.0, 'direct': 4590.0, 'total': 5000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.001, 'direct': 3.99e-05, 'total': 0.001, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 404.0, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 0.09, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.2, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: {'value': 404.0, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 6.0, 'direct': 175.0, 'total': 200.0, 'unit': 'kgCO2eq'}
+direct gwp: 385.81 lbs
 
 
 estimates base parameters
@@ -1558,24 +1557,27 @@ energy consumption: {'value': 1710000.0, 'unit': 'kWh'}
 dynamic impacts gwp: {'embodied': 7000.0, 'direct': 632000.0, 'total': 600000.0, 'unit': 'kgCO2eq'}
 direct gwp: 1393322.63 lbs
 ELMo
-estimated impacts: {'gwp': {'embodied': 5.0, 'direct': 212.0, 'total': 200.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 70.0, 'direct': 6520.0, 'total': 7000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.001, 'direct': 5.66e-05, 'total': 0.001, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 574.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.1, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.2, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: {'value': 574.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 5.0, 'direct': 212.0, 'total': 200.0, 'unit': 'kgCO2eq'}
-direct gwp: 467.38 lbs
+estimated impacts: {'gwp': {'embodied': 6.0, 'direct': 293.0, 'total': 300.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 80.0, 'direct': 9000.0, 'total': 9000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.001, 'direct': 7.82e-05, 'total': 0.002, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 793.0, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 0.1, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.3, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+energy consumption: {'value': 793.0, 'unit': 'kWh'}
+dynamic impacts gwp: {'embodied': 6.0, 'direct': 293.0, 'total': 300.0, 'unit': 'kgCO2eq'}
+direct gwp: 645.95 lbs
 #+end_example
 
-We obtain the folowing results, the differences can be explained by
+We obtain the folowing results
+
+| model                             | expected energy | estimated energy match | estimated energy base | expected CO_2 e |        | estimated CO_2 e match |        | estimated CO_2 e base |            |
+|                                   |           (kWh) |                  (kWh) |                 (kWh) | (kg)           |  (lbs) |                  (kg) |  (lbs) |                 (kg) |      (lbs) |
+|-----------------------------------+-----------------+------------------------+-----------------------+----------------+--------+-----------------------+--------+----------------------+------------|
+| Transformer_base                   |              27 |                   38.1 |                  74.8 |                |     26 |                  16.5 |  36.38 |                 27.7 |      61.07 |
+| Transformer_big                    |             201 |                    267 |                   523 |                |    192 |                   116 | 255.74 |                  194 |      427.7 |
+| BERT_base                          |            1507 |                   2000 |                  3920 |                |   1438 |                   865 |   1907 |                 1450 |    3196.71 |
+| Neural Architechture Search (NAS) |          656347 |                 871000 |               1710000 |                | 626155 |                377000 | 831143 |               632000 | 1393322.63 |
+| ELMo                              |             275 |                    404 |                   793 |                |    262 |                   175 | 385.81 |                  293 |     645.95 |
+
+We can see that we obtain estimates that are, as expected, a little
+bit higher than those presented, the differences between the match and base setups can be explained by
 two things: the used Carbon Intensity for the USA in the base values
 is 370gCO_2 e/kWh instead of the 432gCO_2 e/kWh when trying to match.
 The dynamic ratio is roughly twice as high when using the base value
-compared to using the indicated PUE
-
-| model           | expected energy | estimated energy match | estimated energy base | expected CO_2 e |        | estimated CO_2 e match |        | estimated CO_2 e base |            |
-|                 |           (kWh) |                  (kWh) |                 (kWh) | (kg)           |  (lbs) |                  (kg) |  (lbs) |                 (kg) |      (lbs) |
-|-----------------+-----------------+------------------------+-----------------------+----------------+--------+-----------------------+--------+----------------------+------------|
-| Transformer_base |              27 |                   38.1 |                  74.8 |                |     26 |                  16.5 |  36.38 |                 27.7 |      61.07 |
-| Transformer_big  |             201 |                    267 |                   523 |                |    192 |                   116 | 255.74 |                  194 |      427.7 |
-| BERT_base        |            1507 |                   2000 |                  3920 |                |   1438 |                   865 |   1907 |                 1450 |    3196.71 |
-| NAS             |          656347 |                 871000 |               1710000 |                | 626155 |                377000 | 831143 |               632000 | 1393322.63 |
-| ELMo            |             275 |                    293 |                   574 |                |    262 |                   127 | 279.99 |                  212 |     467.38 |
+compared to using the indicated PUE.
