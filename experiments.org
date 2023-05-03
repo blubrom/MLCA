@@ -1587,7 +1587,7 @@ return(5/.12, 118/.12, 9870/.12)
 #+end_src
 
 #+RESULTS:
-| 41.66666666666667 | 983.3333333333334 | 82250.0 |
+| :.2f | 983.3333333333334 | 82250.0 |
 
 To complement the case study on hyperparameter search and costs not
 only on training one model but of the whole process, let us try and
@@ -1600,7 +1600,8 @@ model = {
     "configuration":{
         "ram": [
             {
-                "units" : 0
+                "units" : 1,
+                "capacity": 1
             }
         ]
     }
@@ -1635,12 +1636,77 @@ estimate(239942, "4789_jobs")
 #+end_src
 
 #+RESULTS:
-: estimated impacts: {'gwp': {'embodied': 1.7, 'direct': 36.0, 'total': 38.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 23.0, 'direct': 1110.0, 'total': 1100.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.00039, 'direct': 9.6e-06, 'total': 0.0004, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 97.3, 'unit': 'kWh'}}
-: to put impacts in perspective: {'relative_SNBC': {'value': 0.019, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.038, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.013, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-: Direct energy consumption: 97.3 kWh, translates to a cost of 11.676000 $
-: estimated impacts: {'gwp': {'embodied': 41.0, 'direct': 864.0, 'total': 910.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 560.0, 'direct': 26500.0, 'total': 27000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0093, 'direct': 0.00023, 'total': 0.0095, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 2340.0, 'unit': 'kWh'}}
-: to put impacts in perspective: {'relative_SNBC': {'value': 0.45, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.92, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.3, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-: Direct energy consumption: 2340.0 kWh, translates to a cost of 280.800000 $
-: estimated impacts: {'gwp': {'embodied': 3400.0, 'direct': 72000.0, 'total': 75000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 46000.0, 'direct': 2210000.0, 'total': 2300000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.78, 'direct': 0.0192, 'total': 0.79, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 195000.0, 'unit': 'kWh'}}
-: to put impacts in perspective: {'relative_SNBC': {'value': 38.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 77.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 25.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-: Direct energy consumption: 195000.0 kWh, translates to a cost of 23400.000000 $
+: estimated impacts: {'gwp': {'embodied': 1.4, 'direct': 34.4, 'total': 36.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 20.0, 'direct': 1060.0, 'total': 1100.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.00038, 'direct': 9.17e-06, 'total': 0.00039, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 93.0, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 0.018, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.036, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.012, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: Direct energy consumption: 93.0 kWh, translates to a cost of 11.160000 $
+: estimated impacts: {'gwp': {'embodied': 34.0, 'direct': 826.0, 'total': 860.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 470.0, 'direct': 25400.0, 'total': 26000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0091, 'direct': 0.00022, 'total': 0.0093, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 2230.0, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 0.43, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.87, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.29, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: Direct energy consumption: 2230.0 kWh, translates to a cost of 267.600000 $
+: estimated impacts: {'gwp': {'embodied': 2800.0, 'direct': 68800.0, 'total': 72000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 39000.0, 'direct': 2110000.0, 'total': 2200000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.76, 'direct': 0.0183, 'total': 0.78, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 186000.0, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 36.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 73.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 25.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: Direct energy consumption: 186000.0 kWh, translates to a cost of 22320.000000 $
+
+If we compare the estimates we produce to thoses presented in the
+paper:
+
+| Models |  Hours | energy | Expected electricity cost | estimated electricity cost |
+|        |        |  (kWh) |                       ($) |                        ($) |
+|      1 |    120 |     93 |                         5 |                         11 |
+|     24 |   2880 |   2230 |                       118 |                        267 |
+|   4789 | 239942 | 186000 |                      9870 |                      22320 |
+
+We can see that we still obtain values approximately twice as high as
+the ones presented. This fact can be mostly explained by the
+difference between using a PUE of 1.58 and a dynamic ratio of 3.1
+
+
+We can see that the full impacts estimated for performing the whole
+model search, hyperparameter tuning and training represents the annual
+impacts of 36 persons if we place ourselves in a scenario where we
+would respect the "Stratégie Nationale Bas Carbone" for France
+by 2050. If we place ourselves in the framework of the Planetary
+boundaries, where if we want to stay sustainable, societies must not
+overpass the planetary boundaries. The whole process accounts for the
+maximal annual impacts of 73 persons in terms of Green House Gas
+emissions and the annual impacts of 25 persons in terms of ressource
+depletion.
+
+Of course, if computations were to run in a country with a
+less carbon intensive electricity mix, green warming potential would
+be lower. Still, the impacts on ressources depletion are very
+important, and, in this estimation, we do not take into account any (1
+GB) memory on the server that runs the experiments. 
+
+If we were to add memory, for instance 512 GB of memory, we would
+obtain the following estimation
+
+#+begin_src python :results output :exports both :session
+model["server"]["configuration"]["ram"][0]["capacity"] = 512
+estimate(239942, "4789_jobs_with_ram")
+#+end_src
+
+#+RESULTS:
+: estimated impacts: {'gwp': {'embodied': 12000.0, 'direct': 121000.0, 'total': 130000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 160000.0, 'direct': 3720000.0, 'total': 3900000.0, 'unit': 'MJ'}, 'adp': {'embodied': 1.0, 'direct': 0.0323, 'total': 1.1, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 327000.0, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 67.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 140.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 34.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: Direct energy consumption: 327000.0 kWh, translates to a cost of 39240.000000 $
+
+with expected impacts as high as the maximal anual ones of 140 persons
+in terms of GWP and 34 persons in terms of Ressources depletion.
+
+As a title of comparison, if we were to make the same estimates but
+running in France, we would obtain the following (with a carbon
+intensity of 98gCO_2 e/kWh)
+
+#+begin_src python :results output :exports both :session
+model["usage"]["usage_location"] = "FRA"
+estimate(239942, "4789_jobs_with_ram_France")
+#+end_src
+
+#+RESULTS:
+: estimated impacts: {'gwp': {'embodied': 12000.0, 'direct': 32100.0, 'total': 45000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 160000.0, 'direct': 3700000.0, 'total': 3900000.0, 'unit': 'MJ'}, 'adp': {'embodied': 1.0, 'direct': 0.0159, 'total': 1.1, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 327000.0, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 22.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 45.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 33.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: Direct energy consumption: 327000.0 kWh, translates to a cost of 39240.000000 $
+
+It would still represent the maximal annual emissions of 45 persons in
+terms of GWP and the maximal impacts of 33 persons in terms of
+ressources depletion
