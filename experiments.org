@@ -88,10 +88,10 @@ print_gwp_and_energy(results)
 #+end_src
 
 #+RESULTS:
-: estimated impacts: {'gwp': {'embodied': 0.2, 'direct': 0.196, 'total': 0.4, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 3.0, 'direct': 49.3, 'total': 50.0, 'unit': 'MJ'}, 'adp': {'embodied': 3e-05, 'direct': 2.46e-07, 'total': 3e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 3.83, 'unit': 'kWh'}}
-: to put impacts in perspective: {'relative_SNBC': {'value': 0.0002, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.0004, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.001, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: estimated impacts: {'gwp': {'embodied': 0.2, 'direct': 0.196, 'total': 0.39, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 2.6, 'direct': 49.3, 'total': 52.0, 'unit': 'MJ'}, 'adp': {'embodied': 3.4e-05, 'direct': 2.46e-07, 'total': 3.4e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 3.83, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 0.0002, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.0004, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.0011, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 : energy consumption: {'value': 3.83, 'unit': 'kWh'}
-: dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.196, 'total': 0.4, 'unit': 'kgCO2eq'}
+: dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.196, 'total': 0.39, 'unit': 'kgCO2eq'}
 
 we see that we indeed obtain the same results of 196g CO_2 e and 3.83
 kWh of dynamic energy consumption.
@@ -195,15 +195,10 @@ curl -X 'POST' \
 #+end_src
 
 #+RESULTS:
-: {"impacts":{"gwp":{"manufacture":300.0,"use":"not implemented","unit":"kgCO2eq"},"pe":{"manufacture":4000.0,"use":"not implemented","unit":"MJ"},"adp":{"manufacture":0.03,"use":"not implemented","unit":"kgSbeq"}},"verbose":{"units":1,"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},"memory":{"capacity":{"input_value":null,"used_value":80,"status":"SET"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":290.0,"unit":"kgCO2eq"},"pe":{"value":3600.0,"unit":"MJ"},"adp":{"value":0.0098,"unit":"kgSbeq"}}},"impacts":{"gwp":{"value":300.0,"unit":"kgCO2eq"},"pe":{"value":4000.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}
-"verbose":{"units":1,"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA
-A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80
-GB","status":"UNCHANGED"},
-"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},
-"memory":{"capacity":{"input_value":null,"used_value":80,"status":"SET"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":290.0,"unit":"kgCO2eq"},"pe":{"value":3600.0,"unit":"MJ"},"adp":{"value":0.0098,"unit":"kgSbeq"}}},"impacts":{"gwp":{"value":300.0,"unit":"kgCO2eq"},"pe":{"value":4000.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}
+: {"impacts":{"gwp":{"manufacture":310.0,"use":"not implemented","unit":"kgCO2eq"},"pe":{"manufacture":3900.0,"use":"not implemented","unit":"MJ"},"adp":{"manufacture":0.03,"use":"not implemented","unit":"kgSbeq"}},"verbose":{"units":1,"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},"memory":{"capacity":{"input_value":null,"used_value":80,"status":"SET"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":290.0,"unit":"kgCO2eq"},"pe":{"value":3600.0,"unit":"MJ"},"adp":{"value":0.0098,"unit":"kgSbeq"}}},"impacts":{"gwp":{"value":310.0,"unit":"kgCO2eq"},"pe":{"value":3900.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}
 
 For the specific model used, the "NVIDIA A100 SMX4 80GB", we can see
-a manufacture impact of 300 kgCO_2 e. this impact is mainly influenced
+a manufacture impact of 310 kgCO_2 e. this impact is mainly influenced
 by the quantity of memory on the GPU with 290 kg CO_2 e.
 These are preliminary results since the base value for gpu impacts is
 not proporly set yet.
@@ -225,15 +220,15 @@ print(f"dynamic energy consumption: {dynamic_energy}")
 #+end_src
 
 #+RESULTS:
-: estimated impacts: {'gwp': {'embodied': 10000.0, 'direct': 83100.0, 'total': 100000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 200000.0, 'direct': 18300000.0, 'total': 20000000.0, 'unit': 'MJ'}, 'adp': {'embodied': 1.0, 'direct': 0.0788, 'total': 1.0, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 1620000.0, 'unit': 'kWh'}}
-: to put impacts in perspective: {'relative_SNBC': {'value': 50.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 100.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 40.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-: embodied impacts gwp: {'server': 7000.0, 'gpus': 8000.0, 'unit': 'kgCO2eq'}
+: estimated impacts: {'gwp': {'embodied': 15000.0, 'direct': 83100.0, 'total': 98000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 190000.0, 'direct': 18300000.0, 'total': 18000000.0, 'unit': 'MJ'}, 'adp': {'embodied': 1.3, 'direct': 0.0788, 'total': 1.3, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 1620000.0, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 49.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 99.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 42.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: embodied impacts gwp: {'server': 7000.0, 'gpus': 7600.0, 'unit': 'kgCO2eq'}
 : dynamic impacts gwp: {'value': 26800.0, 'gpus': 22400.0, 'ram': 1350.0, 'cpus': 3140.0, 'unit': 'kgCO2eq'}
 : dynamic energy consumption: {'value': 10900.0, 'unit': 'kWh'}
 
 we can see in the results (full result in results/datetime bloom.json) that we obtain close figures to those in the
 paper.
-with embodied impacts of 7T CO_2 e for the servers and 8T for the
+with embodied impacts of 7T CO_2 e for the servers and 7.6T for the
 GPUs to compare with the 7.6T for the servers and 3.6 T for the GPUs
 in the paper. Most of the difference is due to estimated impacts of
 300 kgCO_2 e for one GPU while it was estimated to 125 kgCO_2 e in the
@@ -392,65 +387,65 @@ Yu2020
 French Press
 server
 energy consumption: {'value': 1.16, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.03, 'direct': 0.0451, 'total': 0.08, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.034, 'direct': 0.0451, 'total': 0.079, 'unit': 'kgCO2eq'}
 Facility
 energy consumption: {'value': 0.861, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.03, 'direct': 0.0336, 'total': 0.07, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.032, 'direct': 0.0336, 'total': 0.066, 'unit': 'kgCO2eq'}
 Facility same TDP
 energy consumption: {'value': 1.03, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.04, 'direct': 0.04, 'total': 0.08, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.039, 'direct': 0.04, 'total': 0.079, 'unit': 'kgCO2eq'}
 EMEA
 server
 energy consumption: {'value': 0.0673, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.002, 'direct': 0.00262, 'total': 0.005, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.002, 'direct': 0.00262, 'total': 0.0046, 'unit': 'kgCO2eq'}
 Facility
 energy consumption: {'value': 0.0499, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.002, 'direct': 0.00195, 'total': 0.004, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.0019, 'direct': 0.00195, 'total': 0.0038, 'unit': 'kgCO2eq'}
 Facility same TDP
 energy consumption: {'value': 0.0595, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.002, 'direct': 0.00232, 'total': 0.005, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.0023, 'direct': 0.00232, 'total': 0.0046, 'unit': 'kgCO2eq'}
 MEDLINE
 server
 energy consumption: {'value': 0.0843, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.002, 'direct': 0.00329, 'total': 0.006, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.0025, 'direct': 0.00329, 'total': 0.0058, 'unit': 'kgCO2eq'}
 Facility
 energy consumption: {'value': 0.0669, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.002, 'direct': 0.00261, 'total': 0.005, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.0025, 'direct': 0.00261, 'total': 0.0051, 'unit': 'kgCO2eq'}
 Facility same TDP
 energy consumption: {'value': 0.0797, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.003, 'direct': 0.00311, 'total': 0.006, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.0031, 'direct': 0.00311, 'total': 0.0062, 'unit': 'kgCO2eq'}
 
 Ma2016
 French Press
 server
 energy consumption: {'value': 0.414, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.01, 'direct': 0.0161, 'total': 0.03, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.012, 'direct': 0.0161, 'total': 0.028, 'unit': 'kgCO2eq'}
 Facility
 energy consumption: {'value': 0.341, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.01, 'direct': 0.0133, 'total': 0.03, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.013, 'direct': 0.0133, 'total': 0.026, 'unit': 'kgCO2eq'}
 Facility same TDP
 energy consumption: {'value': 0.406, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.02, 'direct': 0.0158, 'total': 0.03, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.016, 'direct': 0.0158, 'total': 0.031, 'unit': 'kgCO2eq'}
 EMEA
 server
 energy consumption: {'value': 0.0158, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.0005, 'direct': 0.000616, 'total': 0.001, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.00046, 'direct': 0.000616, 'total': 0.0011, 'unit': 'kgCO2eq'}
 Facility
 energy consumption: {'value': 0.0179, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.0007, 'direct': 0.000697, 'total': 0.001, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.00066, 'direct': 0.000697, 'total': 0.0014, 'unit': 'kgCO2eq'}
 Facility same TDP
 energy consumption: {'value': 0.0213, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.0008, 'direct': 0.00083, 'total': 0.002, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.00082, 'direct': 0.00083, 'total': 0.0016, 'unit': 'kgCO2eq'}
 MEDLINE
 server
 energy consumption: {'value': 0.0225, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.0007, 'direct': 0.000878, 'total': 0.002, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.00066, 'direct': 0.000878, 'total': 0.0015, 'unit': 'kgCO2eq'}
 Facility
 energy consumption: {'value': 0.0216, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.0008, 'direct': 0.000843, 'total': 0.002, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.0008, 'direct': 0.000843, 'total': 0.0016, 'unit': 'kgCO2eq'}
 Facility same TDP
 energy consumption: {'value': 0.0258, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.001, 'direct': 0.001, 'total': 0.002, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.00099, 'direct': 0.001, 'total': 0.002, 'unit': 'kgCO2eq'}
 #+end_example
 
 
@@ -671,10 +666,10 @@ print_gwp_and_energy(output)
     #+end_src
 
     #+RESULTS:
-    : estimated impacts: {'gwp': {'embodied': 4.0, 'direct': 5.46, 'total': 9.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 50.0, 'direct': 1210.0, 'total': 1000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0005, 'direct': 5.21e-06, 'total': 0.0005, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 107.0, 'unit': 'kWh'}}
-    : to put impacts in perspective: {'relative_SNBC': {'value': 0.005, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.009, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.02, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+    : estimated impacts: {'gwp': {'embodied': 3.8, 'direct': 5.46, 'total': 9.3, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 49.0, 'direct': 1210.0, 'total': 1300.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.00053, 'direct': 5.21e-06, 'total': 0.00054, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 107.0, 'unit': 'kWh'}}
+    : to put impacts in perspective: {'relative_SNBC': {'value': 0.0046, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.0094, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.017, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
     : energy consumption: {'value': 107.0, 'unit': 'kWh'}
-    : dynamic impacts gwp: {'embodied': 4.0, 'direct': 5.46, 'total': 9.0, 'unit': 'kgCO2eq'}
+    : dynamic impacts gwp: {'embodied': 3.8, 'direct': 5.46, 'total': 9.3, 'unit': 'kgCO2eq'}
 
 We can see that we obtain an estimate of 5.46kg CO_2 e for the direct
 impacts and a dynamic consumption of 107 kWh, which is close to the
@@ -703,20 +698,20 @@ estimate(1,15,52)
     #+RESULTS:
     #+begin_example
     spectro 3 steps :
-    estimated impacts: {'gwp': {'embodied': 0.7, 'direct': 0.517, 'total': 1.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 9.0, 'direct': 114.0, 'total': 100.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0001, 'direct': 4.93e-07, 'total': 0.0001, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 10.1, 'unit': 'kWh'}}
-    to put impacts in perspective: {'relative_SNBC': {'value': 0.0006, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.001, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.004, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+    estimated impacts: {'gwp': {'embodied': 0.7, 'direct': 0.517, 'total': 1.2, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 9.4, 'direct': 114.0, 'total': 120.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.00014, 'direct': 4.93e-07, 'total': 0.00014, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 10.1, 'unit': 'kWh'}}
+    to put impacts in perspective: {'relative_SNBC': {'value': 0.00061, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.0012, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.0044, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
     energy consumption: {'value': 10.1, 'unit': 'kWh'}
-    dynamic impacts gwp: {'embodied': 0.7, 'direct': 0.517, 'total': 1.0, 'unit': 'kgCO2eq'}
+    dynamic impacts gwp: {'embodied': 0.7, 'direct': 0.517, 'total': 1.2, 'unit': 'kgCO2eq'}
     spectro 2 steps :
-    estimated impacts: {'gwp': {'embodied': 0.5, 'direct': 0.346, 'total': 0.8, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 6.0, 'direct': 76.5, 'total': 80.0, 'unit': 'MJ'}, 'adp': {'embodied': 9e-05, 'direct': 3.3e-07, 'total': 9e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 6.78, 'unit': 'kWh'}}
-    to put impacts in perspective: {'relative_SNBC': {'value': 0.0004, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.0008, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.003, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+    estimated impacts: {'gwp': {'embodied': 0.47, 'direct': 0.346, 'total': 0.81, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 6.3, 'direct': 76.5, 'total': 83.0, 'unit': 'MJ'}, 'adp': {'embodied': 9.3e-05, 'direct': 3.3e-07, 'total': 9.4e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 6.78, 'unit': 'kWh'}}
+    to put impacts in perspective: {'relative_SNBC': {'value': 0.00041, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.00083, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.003, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
     energy consumption: {'value': 6.78, 'unit': 'kWh'}
-    dynamic impacts gwp: {'embodied': 0.5, 'direct': 0.346, 'total': 0.8, 'unit': 'kgCO2eq'}
+    dynamic impacts gwp: {'embodied': 0.47, 'direct': 0.346, 'total': 0.81, 'unit': 'kgCO2eq'}
     spectro 1 steps :
-    estimated impacts: {'gwp': {'embodied': 0.3, 'direct': 0.226, 'total': 0.5, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 4.0, 'direct': 50.1, 'total': 50.0, 'unit': 'MJ'}, 'adp': {'embodied': 6e-05, 'direct': 2.16e-07, 'total': 6e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 4.44, 'unit': 'kWh'}}
-    to put impacts in perspective: {'relative_SNBC': {'value': 0.0003, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.0005, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.002, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+    estimated impacts: {'gwp': {'embodied': 0.31, 'direct': 0.226, 'total': 0.53, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 4.1, 'direct': 50.1, 'total': 54.0, 'unit': 'MJ'}, 'adp': {'embodied': 6.1e-05, 'direct': 2.16e-07, 'total': 6.1e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 4.44, 'unit': 'kWh'}}
+    to put impacts in perspective: {'relative_SNBC': {'value': 0.00027, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.00054, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.0019, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
     energy consumption: {'value': 4.44, 'unit': 'kWh'}
-    dynamic impacts gwp: {'embodied': 0.3, 'direct': 0.226, 'total': 0.5, 'unit': 'kgCO2eq'}
+    dynamic impacts gwp: {'embodied': 0.31, 'direct': 0.226, 'total': 0.53, 'unit': 'kgCO2eq'}
     #+end_example
 We obtain the following results :
 - spectro 3 steps: 10.1kWh, 517g CO_2 e (vs 4.473kWh and 228gCO_2 e in
@@ -847,59 +842,59 @@ experiments(dgx_1_model_correct)
 Replicating the exact results
 GPU benchmark
 EP
-estimated impacts: {'gwp': {'embodied': 0.002, 'direct': 0.00251, 'total': 0.005, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.03, 'direct': 0.552, 'total': 0.6, 'unit': 'MJ'}, 'adp': {'embodied': 2e-07, 'direct': 2.38e-09, 'total': 2e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0489, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 5e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 5e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.0021, 'direct': 0.00251, 'total': 0.0047, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.027, 'direct': 0.552, 'total': 0.58, 'unit': 'MJ'}, 'adp': {'embodied': 1.7e-07, 'direct': 2.38e-09, 'total': 1.7e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0489, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 2.3e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.7e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 5.4e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: 176.040 kJ difference from expectation: -0.134 kJ
 LU
-estimated impacts: {'gwp': {'embodied': 0.006, 'direct': 0.00544, 'total': 0.01, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.08, 'direct': 1.2, 'total': 1.0, 'unit': 'MJ'}, 'adp': {'embodied': 5e-07, 'direct': 5.15e-09, 'total': 5e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.106, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 6e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 2e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.0064, 'direct': 0.00544, 'total': 0.012, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.081, 'direct': 1.2, 'total': 1.3, 'unit': 'MJ'}, 'adp': {'embodied': 5.1e-07, 'direct': 5.15e-09, 'total': 5.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.106, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 5.9e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 1.2e-05, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1.6e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: 381.600 kJ difference from expectation: -0.043 kJ
 MG
-estimated impacts: {'gwp': {'embodied': 0.005, 'direct': 0.00191, 'total': 0.007, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.06, 'direct': 0.421, 'total': 0.5, 'unit': 'MJ'}, 'adp': {'embodied': 4e-07, 'direct': 1.81e-09, 'total': 4e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0373, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 3e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 7e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.005, 'direct': 0.00191, 'total': 0.0069, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.063, 'direct': 0.421, 'total': 0.48, 'unit': 'MJ'}, 'adp': {'embodied': 3.9e-07, 'direct': 1.81e-09, 'total': 3.9e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0373, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 3.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 7e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1.2e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: 134.280 kJ difference from expectation: -0.049 kJ
 
 CPU benchmark
 EP
-estimated impacts: {'gwp': {'embodied': 0.002, 'direct': 0.000367, 'total': 0.002, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.02, 'direct': 0.0807, 'total': 0.1, 'unit': 'MJ'}, 'adp': {'embodied': 1e-07, 'direct': 3.47e-10, 'total': 1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.00715, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 1e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 2e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 4e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.0016, 'direct': 0.000367, 'total': 0.0019, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.02, 'direct': 0.0807, 'total': 0.1, 'unit': 'MJ'}, 'adp': {'embodied': 1.2e-07, 'direct': 3.47e-10, 'total': 1.2e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.00715, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 9.7e-07, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 2e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 3.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: 25.740 kJ difference from expectation: 0.000 kJ
 LU
-estimated impacts: {'gwp': {'embodied': 0.0009, 'direct': 0.00022, 'total': 0.001, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.01, 'direct': 0.0484, 'total': 0.06, 'unit': 'MJ'}, 'adp': {'embodied': 7e-08, 'direct': 2.08e-10, 'total': 7e-08, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.00429, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 6e-07, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 1e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 2e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.00095, 'direct': 0.00022, 'total': 0.0012, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.012, 'direct': 0.0484, 'total': 0.06, 'unit': 'MJ'}, 'adp': {'embodied': 7.5e-08, 'direct': 2.08e-10, 'total': 7.5e-08, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.00429, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 5.8e-07, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 1.2e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 2.4e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: 15.444 kJ difference from expectation: 0.000 kJ
 MG
-estimated impacts: {'gwp': {'embodied': 0.004, 'direct': 0.000916, 'total': 0.005, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.3, 'unit': 'MJ'}, 'adp': {'embodied': 3e-07, 'direct': 8.69e-10, 'total': 3e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 5e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: 64.440 kJ difference from expectation: 0.090 kJ
 
 Running the experiments with the "correct" setup
 GPU benchmark
 EP
-estimated impacts: {'gwp': {'embodied': 0.004, 'direct': 0.000916, 'total': 0.005, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.3, 'unit': 'MJ'}, 'adp': {'embodied': 3e-07, 'direct': 8.69e-10, 'total': 3e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 5e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: 64.440 kJ difference from expectation: -111.734 kJ
 LU
-estimated impacts: {'gwp': {'embodied': 0.004, 'direct': 0.000916, 'total': 0.005, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.3, 'unit': 'MJ'}, 'adp': {'embodied': 3e-07, 'direct': 8.69e-10, 'total': 3e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 5e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: 64.440 kJ difference from expectation: -317.203 kJ
 MG
-estimated impacts: {'gwp': {'embodied': 0.004, 'direct': 0.000916, 'total': 0.005, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.3, 'unit': 'MJ'}, 'adp': {'embodied': 3e-07, 'direct': 8.69e-10, 'total': 3e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 5e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: 64.440 kJ difference from expectation: -69.889 kJ
 
 CPU benchmark
 EP
-estimated impacts: {'gwp': {'embodied': 0.004, 'direct': 0.000916, 'total': 0.005, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.3, 'unit': 'MJ'}, 'adp': {'embodied': 3e-07, 'direct': 8.69e-10, 'total': 3e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 5e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: 64.440 kJ difference from expectation: 38.700 kJ
 LU
-estimated impacts: {'gwp': {'embodied': 0.004, 'direct': 0.000916, 'total': 0.005, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.3, 'unit': 'MJ'}, 'adp': {'embodied': 3e-07, 'direct': 8.69e-10, 'total': 3e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 5e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: 64.440 kJ difference from expectation: 48.996 kJ
 MG
-estimated impacts: {'gwp': {'embodied': 0.004, 'direct': 0.000916, 'total': 0.005, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.3, 'unit': 'MJ'}, 'adp': {'embodied': 3e-07, 'direct': 8.69e-10, 'total': 3e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 5e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: 64.440 kJ difference from expectation: 0.090 kJ
 #+end_example
 
@@ -979,6 +974,7 @@ with open("boaviztapi/data/ml_setups/Nvidia_DGX-1.json", 'r') as m:
     dgx_1_model = json.load(m)
    
 dgx_1_model['usage']['minute_use_time'] = 0
+dgx_1_model['usage']['usage_location'] = "USA"
 
 def estimate(model, task, time):
    print(model + ": " + task)
@@ -1022,86 +1018,98 @@ estimate('small-mBERTbase-fr', 'MEDIA', 2.46)
    MEDIA
    FlauBERTbase: MEDIA
    energy consumption: {'value': 44.2, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 2.0, 'direct': 2.27, 'total': 4.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 1.7, 'direct': 2.27, 'total': 4.0, 'unit': 'kgCO2eq'}
    CamemBERTlarge, CCNet 135 Gb: MEDIA
    energy consumption: {'value': 111.0, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 4.0, 'direct': 5.69, 'total': 10.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 4.2, 'direct': 5.69, 'total': 9.9, 'unit': 'kgCO2eq'}
    CamemBERTbase, OSCAR 138 Gb: MEDIA
    energy consumption: {'value': 44.3, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 2.0, 'direct': 2.27, 'total': 4.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 1.7, 'direct': 2.27, 'total': 4.0, 'unit': 'kgCO2eq'}
    CamemBERTbase, CCNet 135 Gb: MEDIA
    energy consumption: {'value': 34.1, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.0, 'direct': 1.75, 'total': 3.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 1.3, 'direct': 1.75, 'total': 3.0, 'unit': 'kgCO2eq'}
    CamemBERTbase, OSCAR 4 Gb: MEDIA
    energy consumption: {'value': 34.8, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.0, 'direct': 1.79, 'total': 3.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 1.3, 'direct': 1.79, 'total': 3.1, 'unit': 'kgCO2eq'}
    CamemBERTbase, CCNet 4 Gb: MEDIA
    energy consumption: {'value': 34.3, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.0, 'direct': 1.76, 'total': 3.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 1.3, 'direct': 1.76, 'total': 3.1, 'unit': 'kgCO2eq'}
    CamemBERTbase, Wiki 4 Gb: MEDIA
    energy consumption: {'value': 33.7, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.0, 'direct': 1.73, 'total': 3.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 1.3, 'direct': 1.73, 'total': 3.0, 'unit': 'kgCO2eq'}
    FrALBERTbase, Wiki 4 Gb: MEDIA
    energy consumption: {'value': 20.0, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.8, 'direct': 1.02, 'total': 2.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.76, 'direct': 1.02, 'total': 1.8, 'unit': 'kgCO2eq'}
    XLM-Rbase: MEDIA
    energy consumption: {'value': 37.7, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.0, 'direct': 1.93, 'total': 3.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 1.4, 'direct': 1.93, 'total': 3.4, 'unit': 'kgCO2eq'}
    XLM-Rlarge: MEDIA
    energy consumption: {'value': 122.0, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 5.0, 'direct': 6.26, 'total': 10.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 4.6, 'direct': 6.26, 'total': 11.0, 'unit': 'kgCO2eq'}
    mBERTbase: MEDIA
    energy consumption: {'value': 39.3, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.0, 'direct': 2.02, 'total': 4.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 1.5, 'direct': 2.02, 'total': 3.5, 'unit': 'kgCO2eq'}
    distill-mBERTbase: MEDIA
    energy consumption: {'value': 33.0, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.0, 'direct': 1.69, 'total': 3.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 1.3, 'direct': 1.69, 'total': 2.9, 'unit': 'kgCO2eq'}
    small-mBERTbase-fr: MEDIA
    energy consumption: {'value': 36.0, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.0, 'direct': 1.85, 'total': 3.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 1.4, 'direct': 1.85, 'total': 3.2, 'unit': 'kgCO2eq'}
    ATIS-FR
    FlauBERTbase: MEDIA
    energy consumption: {'value': 6.75, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.3, 'direct': 0.346, 'total': 0.6, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.26, 'direct': 0.346, 'total': 0.6, 'unit': 'kgCO2eq'}
    CamemBERTlarge, CCNet 135 Gb: MEDIA
    energy consumption: {'value': 16.1, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.6, 'direct': 0.827, 'total': 1.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.61, 'direct': 0.827, 'total': 1.4, 'unit': 'kgCO2eq'}
    CamemBERTbase, OSCAR 138 Gb: MEDIA
    energy consumption: {'value': 7.16, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.3, 'direct': 0.367, 'total': 0.6, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.27, 'direct': 0.367, 'total': 0.64, 'unit': 'kgCO2eq'}
    CamemBERTbase, CCNet 135 Gb: MEDIA
    energy consumption: {'value': 5.59, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.286, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.21, 'direct': 0.286, 'total': 0.5, 'unit': 'kgCO2eq'}
    CamemBERTbase, OSCAR 4 Gb: MEDIA
    energy consumption: {'value': 5.52, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.283, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.21, 'direct': 0.283, 'total': 0.49, 'unit': 'kgCO2eq'}
    CamemBERTbase, CCNet 4 Gb: MEDIA
    energy consumption: {'value': 5.67, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.291, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.22, 'direct': 0.291, 'total': 0.51, 'unit': 'kgCO2eq'}
    CamemBERTbase, Wiki 4 Gb: MEDIA
    energy consumption: {'value': 5.48, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.281, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.21, 'direct': 0.281, 'total': 0.49, 'unit': 'kgCO2eq'}
    FrALBERTbase, Wiki 4 Gb: MEDIA
    energy consumption: {'value': 3.05, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.1, 'direct': 0.156, 'total': 0.3, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.156, 'total': 0.27, 'unit': 'kgCO2eq'}
    XLM-Rbase: MEDIA
    energy consumption: {'value': 5.26, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.27, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.27, 'total': 0.47, 'unit': 'kgCO2eq'}
    XLM-Rlarge: MEDIA
    energy consumption: {'value': 17.6, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.7, 'direct': 0.901, 'total': 2.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.67, 'direct': 0.901, 'total': 1.6, 'unit': 'kgCO2eq'}
    mBERTbase: MEDIA
    energy consumption: {'value': 5.43, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.279, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.21, 'direct': 0.279, 'total': 0.49, 'unit': 'kgCO2eq'}
    distill-mBERTbase: MEDIA
    energy consumption: {'value': 5.15, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.264, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.264, 'total': 0.46, 'unit': 'kgCO2eq'}
    small-mBERTbase-fr: MEDIA
    energy consumption: {'value': 5.39, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.276, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.21, 'direct': 0.276, 'total': 0.48, 'unit': 'kgCO2eq'}
    #+end_example
 
 
+One might want to test if it was only a unit impact.
+   #+begin_src python :results output :exports both :session
+estimate('test', 'test', 72/3600)
+   #+end_src
+
+   #+RESULTS:
+   : test: test
+   : energy consumption: {'value': 0.0438, 'unit': 'kWh'}
+   : dynamic impacts gwp: {'embodied': 0.0017, 'direct': 0.00225, 'total': 0.0039, 'unit': 'kgCO2eq'}
+These results are not helping us in any way.
+One option could be a transcription from pounds to kgs without
+conversion ?
 
 we obtain the following results:
 
@@ -1234,52 +1242,52 @@ FQuAD_train_estimate('distil-mBERT_base', 6466)
    #+begin_example
    CamemBERT_base: FQuAD_train_lower
    energy consumption: {'value': 1.41, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.1, 'direct': 0.415, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.415, 'total': 0.54, 'unit': 'kgCO2eq'}
    FraLBERT_base: FQuAD_train_upper
    energy consumption: {'value': 1.43, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.1, 'direct': 0.421, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.421, 'total': 0.54, 'unit': 'kgCO2eq'}
    CamemBERT_large: FQuAD_train_lower
    energy consumption: {'value': 3.77, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.3, 'direct': 1.11, 'total': 1.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.33, 'direct': 1.11, 'total': 1.4, 'unit': 'kgCO2eq'}
    FraLBERT_base: FQuAD_train_upper
    energy consumption: {'value': 3.83, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.3, 'direct': 1.13, 'total': 1.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.33, 'direct': 1.13, 'total': 1.5, 'unit': 'kgCO2eq'}
    FraLBERT_base: FQuAD_train_lower
    energy consumption: {'value': 0.75, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.07, 'direct': 0.221, 'total': 0.3, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.065, 'direct': 0.221, 'total': 0.29, 'unit': 'kgCO2eq'}
    FraLBERT_base: FQuAD_train_upper
    energy consumption: {'value': 0.761, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.07, 'direct': 0.225, 'total': 0.3, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.065, 'direct': 0.225, 'total': 0.29, 'unit': 'kgCO2eq'}
    XLM-R_base: FQuAD_train_lower
    energy consumption: {'value': 1.5, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.1, 'direct': 0.441, 'total': 0.6, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.13, 'direct': 0.441, 'total': 0.57, 'unit': 'kgCO2eq'}
    FraLBERT_base: FQuAD_train_upper
    energy consumption: {'value': 1.52, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.1, 'direct': 0.448, 'total': 0.6, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.13, 'direct': 0.448, 'total': 0.58, 'unit': 'kgCO2eq'}
    XLM-R_large: FQuAD_train_lower
    energy consumption: {'value': 4.1, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.4, 'direct': 1.21, 'total': 2.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.36, 'direct': 1.21, 'total': 1.6, 'unit': 'kgCO2eq'}
    FraLBERT_base: FQuAD_train_upper
    energy consumption: {'value': 4.16, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.4, 'direct': 1.23, 'total': 2.0, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.36, 'direct': 1.23, 'total': 1.6, 'unit': 'kgCO2eq'}
    mBERT_base: FQuAD_train_lower
    energy consumption: {'value': 1.43, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.1, 'direct': 0.422, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.422, 'total': 0.55, 'unit': 'kgCO2eq'}
    FraLBERT_base: FQuAD_train_upper
    energy consumption: {'value': 1.45, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.1, 'direct': 0.428, 'total': 0.6, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.428, 'total': 0.55, 'unit': 'kgCO2eq'}
    small-mBERT_base: FQuAD_train_lower
    energy consumption: {'value': 1.4, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.1, 'direct': 0.414, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.414, 'total': 0.54, 'unit': 'kgCO2eq'}
    FraLBERT_base: FQuAD_train_upper
    energy consumption: {'value': 1.42, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.1, 'direct': 0.42, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.42, 'total': 0.54, 'unit': 'kgCO2eq'}
    distil-mBERT_base: FQuAD_train_lower
    energy consumption: {'value': 1.26, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.1, 'direct': 0.372, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.11, 'direct': 0.372, 'total': 0.48, 'unit': 'kgCO2eq'}
    FraLBERT_base: FQuAD_train_upper
    energy consumption: {'value': 1.28, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.1, 'direct': 0.378, 'total': 0.5, 'unit': 'kgCO2eq'}
+   dynamic impacts gwp: {'embodied': 0.11, 'direct': 0.378, 'total': 0.49, 'unit': 'kgCO2eq'}
    #+end_example
 
 we obtain the following results:
@@ -1500,67 +1508,67 @@ estimates(base_model, "base")
 #+begin_example
 estimates match
 Transformer_base
-estimated impacts: {'gwp': {'embodied': 0.3, 'direct': 16.5, 'total': 20.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 4.0, 'direct': 433.0, 'total': 400.0, 'unit': 'MJ'}, 'adp': {'embodied': 8e-05, 'direct': 3.76e-06, 'total': 9e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 38.1, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.008, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.02, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.003, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.3, 'direct': 16.5, 'total': 17.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 4.0, 'direct': 433.0, 'total': 440.0, 'unit': 'MJ'}, 'adp': {'embodied': 8.3e-05, 'direct': 3.76e-06, 'total': 8.6e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 38.1, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 0.0084, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.017, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.0027, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: {'value': 38.1, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.3, 'direct': 16.5, 'total': 20.0, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.3, 'direct': 16.5, 'total': 17.0, 'unit': 'kgCO2eq'}
 direct gwp: 36.38 lbs
 Transformer_big
-estimated impacts: {'gwp': {'embodied': 2.0, 'direct': 116.0, 'total': 100.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 30.0, 'direct': 3030.0, 'total': 3000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0006, 'direct': 2.63e-05, 'total': 0.0006, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 267.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.1, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.02, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 2.1, 'direct': 116.0, 'total': 120.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 28.0, 'direct': 3030.0, 'total': 3100.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.00058, 'direct': 2.63e-05, 'total': 0.0006, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 267.0, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 0.059, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.12, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.019, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: {'value': 267.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 2.0, 'direct': 116.0, 'total': 100.0, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 2.1, 'direct': 116.0, 'total': 120.0, 'unit': 'kgCO2eq'}
 direct gwp: 255.74 lbs
 BERT_base
-estimated impacts: {'gwp': {'embodied': 9.0, 'direct': 865.0, 'total': 900.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 100.0, 'direct': 22700.0, 'total': 20000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.003, 'direct': 0.000197, 'total': 0.003, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 2000.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.4, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.9, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.1, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 8.7, 'direct': 865.0, 'total': 870.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 120.0, 'direct': 22700.0, 'total': 23000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0029, 'direct': 0.000197, 'total': 0.003, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 2000.0, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 0.44, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.89, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.096, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: {'value': 2000.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 9.0, 'direct': 865.0, 'total': 900.0, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 8.7, 'direct': 865.0, 'total': 870.0, 'unit': 'kgCO2eq'}
 direct gwp: 1907.00 lbs
 NAS
-estimated impacts: {'gwp': {'embodied': 7000.0, 'direct': 377000.0, 'total': 400000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 90000.0, 'direct': 9900000.0, 'total': 10000000.0, 'unit': 'MJ'}, 'adp': {'embodied': 2.0, 'direct': 0.0859, 'total': 2.0, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 871000.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 200.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 400.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 60.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 6800.0, 'direct': 377000.0, 'total': 380000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 92000.0, 'direct': 9900000.0, 'total': 10000000.0, 'unit': 'MJ'}, 'adp': {'embodied': 1.9, 'direct': 0.0859, 'total': 2.0, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 871000.0, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 190.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 390.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 62.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: {'value': 871000.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 7000.0, 'direct': 377000.0, 'total': 400000.0, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 6800.0, 'direct': 377000.0, 'total': 380000.0, 'unit': 'kgCO2eq'}
 direct gwp: 831143.41 lbs
 ELMo
-estimated impacts: {'gwp': {'embodied': 6.0, 'direct': 175.0, 'total': 200.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 80.0, 'direct': 4590.0, 'total': 5000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.001, 'direct': 3.99e-05, 'total': 0.001, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 404.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.09, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.2, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 5.7, 'direct': 175.0, 'total': 180.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 77.0, 'direct': 4590.0, 'total': 4700.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0014, 'direct': 3.99e-05, 'total': 0.0015, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 404.0, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 0.09, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.18, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.047, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: {'value': 404.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 6.0, 'direct': 175.0, 'total': 200.0, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 5.7, 'direct': 175.0, 'total': 180.0, 'unit': 'kgCO2eq'}
 direct gwp: 385.81 lbs
 
 
 estimates base parameters
 Transformer_base
-estimated impacts: {'gwp': {'embodied': 0.3, 'direct': 27.7, 'total': 30.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 4.0, 'direct': 849.0, 'total': 900.0, 'unit': 'MJ'}, 'adp': {'embodied': 8e-05, 'direct': 7.37e-06, 'total': 9e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 74.8, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.01, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.03, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.003, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 0.3, 'direct': 27.7, 'total': 28.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 4.0, 'direct': 849.0, 'total': 850.0, 'unit': 'MJ'}, 'adp': {'embodied': 8.3e-05, 'direct': 7.37e-06, 'total': 9e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 74.8, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 0.014, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.028, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.0028, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: {'value': 74.8, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.3, 'direct': 27.7, 'total': 30.0, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 0.3, 'direct': 27.7, 'total': 28.0, 'unit': 'kgCO2eq'}
 direct gwp: 61.07 lbs
 Transformer_big
-estimated impacts: {'gwp': {'embodied': 2.0, 'direct': 194.0, 'total': 200.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 30.0, 'direct': 5940.0, 'total': 6000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0006, 'direct': 5.16e-05, 'total': 0.0006, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 523.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.1, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.2, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.02, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 2.1, 'direct': 194.0, 'total': 200.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 28.0, 'direct': 5940.0, 'total': 6000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.00058, 'direct': 5.16e-05, 'total': 0.00063, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 523.0, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 0.098, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.2, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.02, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: {'value': 523.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 2.0, 'direct': 194.0, 'total': 200.0, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 2.1, 'direct': 194.0, 'total': 200.0, 'unit': 'kgCO2eq'}
 direct gwp: 427.70 lbs
 BERT_base
-estimated impacts: {'gwp': {'embodied': 9.0, 'direct': 1450.0, 'total': 1000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 100.0, 'direct': 44500.0, 'total': 40000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.003, 'direct': 0.000386, 'total': 0.003, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 3920.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.7, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 1.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.1, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 8.7, 'direct': 1450.0, 'total': 1500.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 120.0, 'direct': 44500.0, 'total': 45000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0029, 'direct': 0.000386, 'total': 0.0032, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 3920.0, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 0.73, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 1.5, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.1, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: {'value': 3920.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 9.0, 'direct': 1450.0, 'total': 1000.0, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 8.7, 'direct': 1450.0, 'total': 1500.0, 'unit': 'kgCO2eq'}
 direct gwp: 3196.71 lbs
 NAS
-estimated impacts: {'gwp': {'embodied': 7000.0, 'direct': 632000.0, 'total': 600000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 90000.0, 'direct': 19400000.0, 'total': 20000000.0, 'unit': 'MJ'}, 'adp': {'embodied': 2.0, 'direct': 0.168, 'total': 2.0, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 1710000.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 300.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 600.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 60.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 6800.0, 'direct': 632000.0, 'total': 640000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 92000.0, 'direct': 19400000.0, 'total': 19000000.0, 'unit': 'MJ'}, 'adp': {'embodied': 1.9, 'direct': 0.168, 'total': 2.1, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 1710000.0, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 320.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 650.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 65.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: {'value': 1710000.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 7000.0, 'direct': 632000.0, 'total': 600000.0, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 6800.0, 'direct': 632000.0, 'total': 640000.0, 'unit': 'kgCO2eq'}
 direct gwp: 1393322.63 lbs
 ELMo
-estimated impacts: {'gwp': {'embodied': 6.0, 'direct': 293.0, 'total': 300.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 80.0, 'direct': 9000.0, 'total': 9000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.001, 'direct': 7.82e-05, 'total': 0.002, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 793.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.1, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.3, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+estimated impacts: {'gwp': {'embodied': 5.7, 'direct': 293.0, 'total': 300.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 77.0, 'direct': 9000.0, 'total': 9100.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0014, 'direct': 7.82e-05, 'total': 0.0015, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 793.0, 'unit': 'kWh'}}
+to put impacts in perspective: {'relative_SNBC': {'value': 0.15, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.3, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.048, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 energy consumption: {'value': 793.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 6.0, 'direct': 293.0, 'total': 300.0, 'unit': 'kgCO2eq'}
+dynamic impacts gwp: {'embodied': 5.7, 'direct': 293.0, 'total': 300.0, 'unit': 'kgCO2eq'}
 direct gwp: 645.95 lbs
 #+end_example
 
@@ -1587,7 +1595,7 @@ return(5/.12, 118/.12, 9870/.12)
 #+end_src
 
 #+RESULTS:
-| :.2f | 983.3333333333334 | 82250.0 |
+| 41.66666666666667 | 983.3333333333334 | 82250.0 |
 
 To complement the case study on hyperparameter search and costs not
 only on training one model but of the whole process, let us try and
