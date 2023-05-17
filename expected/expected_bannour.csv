@@ -1,0 +1,16 @@
+Method,Task,Hardware,Expected,Estimated,Estimation,Expected,Estimated,Estimation
+,,,Energy,Energy,trying to match,Carbon,Carbon,trying to match
+,,,,,Facility only,,,Facility only
+,,,(kWh),(kWh),(kWh),(gCO2e),(gCO2e),(gCO2e)
+Yu2020,French Press,Server,1.38,1.16,,350.15,45,
+Yu2020,French Press,Facility,1.03,0.861,-1000,260.26,33,40
+Yu2020,EMEA,Server,0.07,0.067,,16.67,2.62,
+Yu2020,EMEA,Facility,0.06,0.0499,0.0595,14.31,1.95,2.32
+Yu2020,MEDLINE,Server,0.08,0.0843,,20.68,3.29,
+Yu2020,MEDLINE,Facility,0.08,0.0669,0.0797,20.03,2.61,3.11
+Ma2016,French Press,Server,0.41,0.414,,104.4,16.1,
+Ma2016,French Press,Facility,0.40,0.341,0.406,102.08,13.3,15.8
+Ma2016,EMEA,Server,0.02,0.0158,,3.8,0.616,
+Ma2016,EMEA,Facility,0.02,0.0179,0.0225,4.99,0.697,0.83
+Ma2016,MEDLINE,Server,0.02,0.0225,,5.57,0.878,
+Ma2016,MEDLINE,Facility,0.02,0.0216,0.025,5.67,0.843,1

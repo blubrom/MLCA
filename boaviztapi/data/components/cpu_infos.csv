@@ -1,6 +1,5 @@
 ,Watts,,,,year,nm,cm²,
 model,TDP,core_units,manufacturer,family,manufacture_date,process,die_size,source,comment
-Pretext,324,40,Intel,Broadwell EP,2016,14,9.12,prout,
 EPYC Embedded 9124,200,16,AMD,Genoa,2023,5,6.85,https://www.techpowerup.com/cpu-specs/epyc-embedded-9124.c3194,die size = 4*72 mm² (5nm) + 397 (6nm)
 EPYC Embedded 9254,200,24,AMD,Genoa,2023,5,6.85,https://www.techpowerup.com/cpu-specs/epyc-embedded-9254.c3193,die size = 4*72 mm² (5nm) + 397 (6nm)
 EPYC Embedded 9354,280,32,AMD,Genoa,2023,5,9.73,https://www.techpowerup.com/cpu-specs/epyc-embedded-9354.c3192,die size = 8*72 mm² (5nm) + 397 (6nm)
@@ -50,6 +49,8 @@ EPYC 7551P,180,32,AMD,Naples,2017,14,2.13,https://www.techpowerup.com/cpu-specs/
 EPYC 7601,180,32,AMD,Naples,2017,14,2.13,https://www.techpowerup.com/cpu-specs/epyc-7601.c1920,
 A8-7600,65,4,AMD,Kaveri,2014,28,2.45,https://www.techpowerup.com/cpu-specs/a8-7600.c2615,
 A8-7680,45,4,AMD,Carrizo,2018,28,2.50,https://www.techpowerup.com/cpu-specs/a8-7680.c2120,
+EPYC 7452,155,32,AMD,Rome,2019,7,0.74,https://www.techpowerup.com/cpu-specs/epyc-7452.c2251,
+
 
 Ryzen 5 7600,65,6,AMD,Raphael,2023,5,1.93,https://www.techpowerup.com/cpu-specs/ryzen-5-7600.c2959,
 Ryzen 7 7700,65,8,AMD,Raphael,2023,5,1.82,https://www.techpowerup.com/cpu-specs/ryzen-7-7700.c2960,
@@ -149,6 +150,7 @@ Xeon E5-2620 v4,85,8,Intel,Broadwell,2016,14,2.4624,https://en.wikichip.org/wiki
 Xeon Gold 6248,150,20,Intel,Cascade Lake SP,2019,14,6.94,https://www.intel.fr/content/www/fr/fr/products/sku/192446/intel-xeon-gold-6248-processor-27-5m-cache-2-50-ghz/specifications.html,We can see on [[https://www.intel.fr/content/www/fr/fr/products/sku/192446/intel-xeon-gold-6248-processor-27-5m-cache-2-50-ghz/specifications.html][Intel's webpage]] that it is a processor of the Cascade Lake architecture. On [[https://en.wikichip.org/wiki/intel/microarchitectures/cascade_lake#LCC_SoC][Wikichip]]; we can see that Cascade Lake Processors use dies largely similar to those of the [[https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server)#Core][Skylake cores]]. Combining all of these pieces of information;  we can get an estimation of the details of an Intel Cascade Lage 6248
 Xeon E5-2698 v4,135,20,Intel,Broadwell EP,2016,14,4.56,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)),XCC configuration
 Xeon E5-2697 v4,145,18,Intel,Broadwell EP,2016,14,4.56,https://en.wikichip.org/wiki/intel/microarchitectures/broadwell_(client)),XCC configuration
+Xeon Gold 6152,140,22,Intel,Skylake SP,2017,14,6.94,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),XCC configuration
 
 
 ,,28,Intel,Skylake,2017,14,6.94,https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server),die size for XCC configuration

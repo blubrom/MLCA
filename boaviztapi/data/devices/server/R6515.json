@@ -2,7 +2,7 @@
   "model":
   {
     "manufacturer": "Dell",
-    "name": "R740",
+    "name": "R6515",
     "type": "rack",
     "year": 2020
   },
@@ -10,30 +10,24 @@
   {
     "cpu":
     {
-      "units": 2,
-      "model": "Xeon Gold 6152" 
+	"units": 1,
+	"model": "EPYC 7452"
     },
     "ram":
     [
       {
-        "units": 12,
-        "capacity": 32,
-        "density": 1.79
+        "units": 8,
+        "capacity": 16,
+        "manufacturer": "Micron" 
       }
     ],
     "disk":
     [
       {
-        "units": 1,
+        "units": 2,
         "type": "ssd",
-        "capacity": 400,
-        "density": 50.6
-      },
-	{
-	    "units": 8,
-	    "type": "ssd",
-	    "capacity": 3840
-	}
+        "capacity": 4000
+      }
     ],
     "power_supply":
     {
@@ -42,8 +36,8 @@
     }
   },
   "usage": {
-    "max_power": 510,
-    "year_use_time": 3,
+    "max_power": 244.2,
+    "years_use_time": 4,
     "workload": {
       "100": {
         "time": 0.15,
@@ -51,15 +45,15 @@
       },
       "50": {
         "time": 0.55,
-        "power": 0.7235
+        "power": 0.7539
       },
       "10": {
         "time": 0.2,
-        "power": 0.5118
+        "power":  0.5410
       },
       "idle": {
         "time": 0.1,
-        "power": 0.3941
+        "power": 0.3878
       }
     }
   }

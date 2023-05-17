@@ -1,0 +1,6 @@
+Models,Hours,Expected,Estimated,Expected,Estimated
+,,energy,energy,electricity,electricity
+,,(kWh),(kWh),cost ($),cost ($)
+1,120,41.7,93,5,11
+24,2880,983,2230,118,267
+4789,239942,82250,186000,9870,22320

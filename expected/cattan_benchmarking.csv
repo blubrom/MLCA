@@ -1,0 +1,16 @@
+Tasks;MEDIA;MEDIA;MEDIA;MEDIA;MEDIA;ATIS-FR;ATIS-FR;ATIS-FR;ATIS-FR;ATIS-FR
+Models;Time;Expected Energy;Estimated Energy;Expected CO2;Estimated CO2;Time;Expected Energy;Estimated Energy;Expected CO2;Estimated CO2
+;(Heures);(MWh);(MWh);(Kg);(Kg);(Heures);(MWh);(MWh);(Kg);(Kg)
+FlauBERTbase;20.19; 204.24;;147.84;;3.08;30.88;;22.33;
+CamemBERTlarge, CCNet 135 Gb;50.63;512.67;;371.14;;7.36;74.23;;53.75;
+CamemBERTbase, OSCAR 138 Gb;20.23;204.67;;148.15;;3.27;32.57;;23.56;
+CamemBERTbase, CCNet 135 Gb;15.57;157.39;;113.96;;2.55;24.79;;17.94;
+CamemBERTbase, OSCAR 4 Gb;15.89;160.70;;116.35;;2.52;25.18;;18.25;
+CamemBERTbase, CCNet 4 Gb;15.64;158.08;;114.42;;2.59;25.49;;18.48;
+CamemBERTbase, Wiki 4 Gb;15.38;155.46;;112.57;;2.50;24.95;;18.10;
+FrALBERTbase, Wiki 4 Gb;9.11;92.02;;66.61;;1.39;13.71;;9.93;
+XLM-Rbase;17.20;173.94;;125.90;;2.40;25.72;;18.63;
+XLM-Rlarge;55.68;563.95;;408.25;;8.02;76.08;;58.60;
+mBERTbase;17.95;181.41;;131.36;;2.48;24.72;;17.94;
+distill-mBERTbase;15.06;152.08;;110.11;;2.35;23.25;;16.79;
+small-mBERTbase-fr;16.45;166.24;;120.35;;2.46;24.56;;17.79;

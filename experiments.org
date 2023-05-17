@@ -1,5 +1,48 @@
-Experiments for validating our tool :
+#+EXPORT_EXCLUDE_TAGS: noexport
 
+#+TITLE: Experiments for validating our tool
+
+In order to validate our tool we first need to conduct some
+experiments to ensure that it produces results consistent with the
+state of the art. Our tool estimates manufacture impacts of the
+hardware used and energy consumption over the usage duration (typically
+during the training phase of a model). We therefore want to test those
+two parts. 
+Firstly, we will present experiments aimed at testing the
+estimates for the dynamic energy consumption (and the results we will
+present will therefore focus only on the energy consumption estimated
+and on the Carbon footprint induced by this energy consumption). These experiments will
+start by reproducing the same exact results as the
+Green Algorithms tool, by first choosing a scenario were we know that
+our tool and Green Algorithms use the same data. Then, we will focus
+on reproducing results presented in the two surveys of existing tools
+(\cite{Bannours2021evaluating} and
+\cite{Jay2023experimental}). Finally, we will try to reproduce results
+obtained with a different method than the one used by our tool. This
+will be done by trying to reproduce results from
+\cite{Dinarelli2022toward}, \cite{Cattan2022benchmarking} and
+\cite{Strubell2019energy}. We chose those articles because they all
+use a different tool (even if measures presented in these three
+articles are based on the \gls{RAPL} and \gls{NVLM} tools), because we
+were able to contact the authors of
+\cite{Dinarelli2022toward,Cattan2022benchmarking} to obtain further
+details about the hardware configuration they use ; Because
+\cite{Cattan2022benchmarking} presents results about the inference
+phase of models which is a phase that is rarely studied and because
+\cite{Strubell2019energy} was the paper that made NLP researchers
+consider the impacts of the models they produced.
+Secondly, we will compare the results our tool produces with \gls{LCA}
+results produced by Dell about the impacts of the servers they
+sell. This will allow us to validate the estimations of embodied
+impacts our tool generates.
+Finally, we will try to reproduce the results from
+\cite{Luccionni2022estimating}, this step is really important because
+this paper conducts an analysis of the global warming potential
+induced by the Bloom model. This analysis takes into account embodied
+emissions and we use figures they present to define the default
+dynamic ratio our tool uses.
+
+* Setup the experiments                                            :noexport:
 first, run the program, we will then be able to send it requests with
 the following command:
 
@@ -9,16 +52,25 @@ this must be realised in another terminal and not in emacs because,
 since it does not terminate, trying to execute it in your emacs would
 make your emacs wait for the death of the process forever.
 
+* Defining some helper functions to easily run experiments and read their results :noexport:
+header with all used packages
 
-* Defining some helper functions to easily run experiments and read their results
-
-then, we define a helper function to be able to more easily run
-experiments and store their results in a more readable way
-#+begin_src python :results output :exports both :session
+  #+begin_src python :results output :exports none :session
+import numpy as np
+import pandas as pd
+import copy
 import json
 import subprocess
 from datetime import datetime
+import matplotlib.pyplot as plt
+import tabulate
+  #+end_src
 
+  #+RESULTS:
+
+then, we define a helper function to be able to more easily run
+experiments and store their results in a more readable way
+#+begin_src python :results output :exports none  :session
 def run_experiment(model, filename, directory='../results', silent=False):
   with open("tmp.json", "w") as tmp:
     json.dump(model, tmp)
@@ -42,24 +94,92 @@ def run_experiment(model, filename, directory='../results', silent=False):
 Full results are put into the results repository under a name that is
 prefixed with the date-time of running the experiment.
 
-As most of the comparisons we are able to make are refering to gwp and
+As most of the comparisons we are able to make are referring to \gls{GWP} and
 energy consumption only, let us also define a helper function
 to print those results.
 
-#+begin_src python :results output :exports both :session
+#+begin_src python :results output :exports none  :session
 def print_gwp_and_energy(results):
     dynamic_energy = results["impacts"]["energy consumption"]
     direct_gwp = results["impacts"]["gwp"]
     print(f"energy consumption: {dynamic_energy}")
     print(f"dynamic impacts gwp: {direct_gwp}")
+    return dynamic_energy['value'], direct_gwp['direct']
 #+end_src
 
 #+RESULTS:
 
+For running experiments about the manufacture impacts of servers
+#+begin_src python :results output :exports none :session
+def run_experiment_server(model, filename, directory='../results', silent=False):
+  with open("tmp.json", "w") as tmp:
+    json.dump(model, tmp)
+  path = "results/" + directory + '/' + datetime.now().strftime("%d-%m-%y_%H-%M") + "_" + filename + ".json"
+  with open(path, "w") as out:
+    request = "curl -X 'POST' 'http://localhost:5000/v1/server/?verbose=true' -H 'accept: aplication/json' -H 'Content-Type: application/json' -d @tmp.json"
+    results = subprocess.run(request, shell=True, check=True, capture_output=True, text=True)
+    output = json.JSONDecoder().decode(results.stdout)
+    impacts = output["impacts"]
+    json.dump(output, out, indent=4, ensure_ascii=True)
+    subprocess.run("rm tmp.json", shell=True)
+    return output
+
+def print_impacts_server(out):
+    gwp = out["impacts"]['gwp']
+    pe = out["impacts"]['pe']
+    adp = out["impacts"]['adp']
+    print(f"GWP: {gwp}")
+    print(f"PE: {pe}")
+    print(f"ADP: {adp}")
+#+end_src
+
+#+RESULTS:
+
+For plotting pie charts of the distribution of gwp by components
+  #+begin_src python :results output :exports none :session
+def get_result_component(results, component):
+    return results['verbose'][component + '-1']["impacts"]['gwp']['value']
+
+def get_results_components(results):
+    res = {}
+    for c in ['CPU', 'RAM', 'SSD', 'POWER_SUPPLY', 'CASE', 'MOTHERBOARD', 'ASSEMBLY']:
+        res[c] = get_result_component(results, c)
+    return res
+
+
+def pie_chart(impacts_dict, name,  directory='../results'):
+    filename = "results/" + directory + '/' + datetime.now().strftime("%d-%m-%y_%H-%M") + "_" + name + ".svg"
+    fig, ax = plt.subplots()
+    ax.pie(impacts_dict.values(), labels=impacts_dict.keys(), autopct='%1.1f%%')
+    ax.set_title("Part Production -" + name + "\nGWP 100 years [kg CO2e]")
+    fig.savefig(filename)
+    return filename
+
+  #+end_src
+
+  #+RESULTS:
+
+
+  #+begin_src python :results output :exports none :session
+def to_org_table(table):
+    return tabulate.tabulate(table, tablefmt='orgtbl', headers="keys", showindex=False)
+
+def rename_multi_index(df, old_col, new_col):
+    df.columns = df.columns.values
+    df.columns = pd.MultiIndex.from_tuples(df.rename(columns={old_col: new_col}))
+
+def multi_index_to_multiline_header(table):
+    names = ['\n'.join(i) for i in table.columns.values]
+    table.columns = names
+    return table
+  #+end_src
+
+  #+RESULTS:
+
 
 * Checking that we can get the same dynamic consumption estimate as Green Algorithms
 
-To do a first sanity check, we verifiy that we are able to reproduce
+To do a first sanity check, we verify that we are able to reproduce
 the same results as GA on the dynamic consumption part :
 
 We choose a configuration that we know is available in both databases
@@ -75,11 +195,11 @@ We choose a configuration that we know is available in both databases
 We are using Green Algorithms v2.2
 for an expected result of 196.32g of CO_2 e and 3.83 kWh of dynamic
 consumption (this [[http://calculator.green-algorithms.org//?runTime_hour=12&runTime_min=0&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=4&CPUmodel=A8-7680&numberGPUs=1&GPUmodel=NVIDIA%20GTX%201080%20Ti&memory=64&platformType=localServer][link]] should in theory get you to the page with this
-exact setup and results but it seems like GA is kind of broken right
+exact setup and results but it seems like GA sharing feature is broken right
 now).
 
 If we now run the experiment with our tool :
-#+begin_src python :results output :exports both :session
+#+begin_src python :results output :exports none :session
 with open("boaviztapi/data/ml_setups/test_equals_ga.json", 'r') as test_ga:
     model_ga = json.load(test_ga)
 results = run_experiment(model_ga, "test_equals_ga.json")
@@ -93,160 +213,22 @@ print_gwp_and_energy(results)
 : energy consumption: {'value': 3.83, 'unit': 'kWh'}
 : dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.196, 'total': 0.39, 'unit': 'kgCO2eq'}
 
-we see that we indeed obtain the same results of 196g CO_2 e and 3.83
+we see that we indeed obtain the same results of 196gCO_2 e and 3.83
 kWh of dynamic energy consumption.
 
-* replicating the Bloom estimates from [Luccioni2021estimating]
+* replicating results from \cite{Bannour2021evaluating}
+In order to replicate results, we first need to gather some
+information about the hardware configuration used to run the
+experiments. Then, we will face the challenge of inconsistencies in the
+data presented in the paper. Finally, we will be able to run
+experiments that give the same energy consumption estimates as those
+presented in the paper.
 
-** Gathering information about the setup
-To replicate their experiments, we first need to gather some
-information on the time duration and hardware setup for the training
-phase.
+** detailing the Hardware configurations
+The authors provided us with information about the hardware
+configurations used to run  the experiments. 
 
-We can see in the paper that the training phase lasted for 118 days, 5
-hours and 41 mins for a total of 1,082,990 GPU hours. (table 1)
-
-in section 4.1, we can read that training used on average 48 computing
-nodes with 8 GPUs each.
-Combining the real time and these information about the setup, we
-obtain
-
-#+begin_src python :results output :exports both
-real_time_hours = 118*24 + 5 + 41/60
-estimated_gpu_hours = real_time_hours * 48 * 8
-print(estimated_gpu_hours)
-#+end_src
-
-#+RESULTS:
-: 1089670.4
-
-we obtain an estimate of the number of GPU hours of 1,089,670.4 hours
-this gives us a pretty close figure to the real GPU time.
-
-It is written in the paper that training took place on the Jean Zay
-supercomputer, using [[https://buy.hpe.com/fr/fr/compute/apollo-systems/apollo-6500-system/apollo-6500-system/hpe-apollo-6500-gen10-plus-system/p/1013092236][HPE's Apollo 6500 Gen10 Plus]]. We can read on
-their website that it uses AMD EPYC 7000 Series CPUs. Combining this
-information with informations about the Jean Zay supercomputer on
-[[http://www.idris.fr/jean-zay/cpu/jean-zay-cpu-hw.html#gpu_p13][IDRIS's website]], we can see that only the **gpu_p5**  partition uses
-such CPUs. 
-We can conclude that for each of the 48 used nodes, the server
-configuration is :
-+ 2 CPUs : AMD Milan EPYC 7543
-+ 512 Go of Memory
-+ 8 NVIDIA A100 SXM4 80Go
-
-** comparing the server footprint with the PCF sheet.
-
-   In section 4.1, it is stated that they use values provided in the
-   [[https://www.hpe.com/psnow/doc/a50005151enw][HPE ProLiant DL345 Gen10 Plus PCF]], the closest server with
-   information provided. In this PCF sheet, we can read that servers
-   are of type rack and that the estimated Carbon Footprint is of
-   2503.2 kg CO_2 e.
-   If we try our tool with the server configuration used for training,
-   we obtain :
-   #+begin_src shell :results output :exports both
-   curl -X 'POST' \
-  'http://localhost:5000/v1/server/?verbose=true' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "model": {
-      "type": "rack"
-    },
-    "configuration": {
-      "cpu": {
-        "units": 2,
-        "model": "AMD Milan EPYC 7543"
-      },
-      "ram": [
-        {
-          "units": 1,
-          "capacity": 512
-        }
-      ]
-    }
-}'
-   #+end_src
-
-   #+RESULTS:
-   : {"impacts":{"gwp":{"manufacture":2300.0,"use":1170.0,"unit":"kgCO2eq"},"pe":{"manufacture":29000.0,"use":39700.0,"unit":"MJ"},"adp":{"manufacture":0.17,"use":0.000198,"unit":"kgSbeq"}},"verbose":{"CPU-1":{"unit":2,"hash":"50cbc426060b04c31b0009f1fb833c7a257a8e5d130d51b4dba3f36bfb49bef2","die_size":{"input_value":null,"used_value":2.1,"status":"SET"},"model":{"input_value":"AMD Milan EPYC 7543","used_value":"AMD Milan EPYC 7543","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":65,"status":"SET"},"impacts":{"gwp":{"value":26.0,"unit":"kgCO2eq"},"pe":{"value":420.0,"unit":"MJ"},"adp":{"value":0.04,"unit":"kgSbeq"}}},"RAM-1":{"unit":1,"hash":"05f20fab521cfc551ec4d5ff4888e0ed7b1cccf43170e03f2234ec6b4c99db1c","capacity":{"input_value":512,"used_value":512,"status":"UNCHANGED"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":1800.0,"unit":"kgCO2eq"},"pe":{"value":22000.0,"unit":"MJ"},"adp":{"value":0.053,"unit":"kgSbeq"}}},"CASE-1":{"unit":1,"hash":"083dcd17f9997756af73de7c61f0cf2986b25075ad00bbf7c07e08cc80a2183f","case_type":{"input_value":"rack","used_value":"rack","status":"UNCHANGED"},"impacts":{"gwp":{"value":150.0,"unit":"kgCO2eq"},"pe":{"value":2200.0,"unit":"MJ"},"adp":{"value":0.0202,"unit":"kgSbeq"}}},"MOTHERBOARD-1":{"unit":1,"hash":"3a31a8fbd4b871719831ef11af93eefbb1c2afc0f62d850a31fb5475aac9336e","impacts":{"gwp":{"value":66.1,"unit":"kgCO2eq"},"pe":{"value":836.0,"unit":"MJ"},"adp":{"value":0.00369,"unit":"kgSbeq"}}},"ASSEMBLY-1":{"unit":1,"hash":"8bfe70a2b59691c050865455cc9cf1b561ec702e7cf930c1026a490964bbd364","impacts":{"gwp":{"value":6.68,"unit":"kgCO2eq"},"pe":{"value":68.6,"unit":"MJ"},"adp":{"value":1.41e-06,"unit":"kgSbeq"}}},"SSD-1":{"unit":1,"hash":"cb269039943b145f924c394acd2f665c10b23bddf954428af81bd8eccaff3d6a","capacity":{"input_value":null,"used_value":1000,"status":"SET"},"density":{"input_value":null,"used_value":48.5,"status":"SET"},"impacts":{"gwp":{"value":52.0,"unit":"kgCO2eq"},"pe":{"value":640.0,"unit":"MJ"},"adp":{"value":0.0019,"unit":"kgSbeq"}}},"POWER_SUPPLY-1":{"unit":2,"hash":"be84aabaaac41126e1bd93ec3c10b355c6c7534cf9e3d7337cef9d6d0bb116c6","unit_weight":{"input_value":null,"used_value":2.99,"status":"SET"},"impacts":{"gwp":{"value":145.32,"unit":"kgCO2eq"},"pe":{"value":2100.0,"unit":"MJ"},"adp":{"value":0.0496,"unit":"kgSbeq"}}},"USAGE-1":{"unit":1,"hash":0,"years_use_time":{"input_value":null,"used_value":1,"status":"SET"},"hours_electrical_consumption":{"input_value":null,"used_value":0.35175,"status":"SET"},"usage_location":{"input_value":null,"used_value":"EEE","status":"SET"},"gwp_factor":{"input_value":null,"used_value":0.38,"status":"SET"},"pe_factor":{"input_value":null,"used_value":12.874,"status":"SET"},"adp_factor":{"input_value":null,"used_value":6.42e-08,"status":"SET"},"max_power":{"input_value":null,"used_value":510,"status":"SET"},"workload":{"100":{"time":{"input_value":null,"used_value":0.15,"status":"SET"},"power":{"input_value":null,"used_value":1.0,"status":"SET"}},"50":{"time":{"input_value":null,"used_value":0.5499999999999999,"status":"SET"},"power":{"input_value":null,"used_value":0.7235294117647059,"status":"SET"}},"10":{"time":{"input_value":null,"used_value":0.19999999999999998,"status":"SET"},"power":{"input_value":null,"used_value":0.5117647058823529,"status":"SET"}},"idle":{"time":{"input_value":null,"used_value":0.09999999999999999,"status":"SET"},"power":{"input_value":null,"used_value":0.3941176470588235,"status":"SET"}},"off":{"time":{"input_value":null,"used_value":0.0,"status":"SET"},"power":{"input_value":null,"used_value":0.0,"status":"SET"}}},"impacts":{"gwp":{"value":1170.0,"unit":"kgCO2eq"},"pe":{"value":39700.0,"unit":"MJ"},"adp":{"value":0.000198,"unit":"kgSbeq"}}}}}
-
-we can see manufacture impacts of 2300 kg CO_2 e. This impact is close
-to the 2500 kgCO_2 e provided on the PCF sheet and is mainly impacted
-by the quantity of memory used, as it accounts for 1800 kg CO_2 e.
-
-** comparing the GPU footprint with the chosen value
-
-In section 4.1, it is stated that a value of 150 kg CO_2 e is
-chosen. Taking a look at the source, there is no real justification
-given for that value. Given that in [Loubet2023life] a small GPUs
-manufacture is estimated at emiting around 30 kg CO_2 e, we can
-hypothesize that GPU manufacture impacts would be in the order of 50
-to 150 kg CO_2 e.
-
-#+begin_src shell :results output :exports both
-curl -X 'POST' \
-  'http://localhost:5000/v1/component/gpu?verbose=true' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "model": "NVIDIA A100 SXM4 80 GB"
-}'
-#+end_src
-
-#+RESULTS:
-: {"impacts":{"gwp":{"manufacture":310.0,"use":"not implemented","unit":"kgCO2eq"},"pe":{"manufacture":3900.0,"use":"not implemented","unit":"MJ"},"adp":{"manufacture":0.03,"use":"not implemented","unit":"kgSbeq"}},"verbose":{"units":1,"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},"memory":{"capacity":{"input_value":null,"used_value":80,"status":"SET"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":290.0,"unit":"kgCO2eq"},"pe":{"value":3600.0,"unit":"MJ"},"adp":{"value":0.0098,"unit":"kgSbeq"}}},"impacts":{"gwp":{"value":310.0,"unit":"kgCO2eq"},"pe":{"value":3900.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}
-
-For the specific model used, the "NVIDIA A100 SMX4 80GB", we can see
-a manufacture impact of 310 kgCO_2 e. this impact is mainly influenced
-by the quantity of memory on the GPU with 290 kg CO_2 e.
-These are preliminary results since the base value for gpu impacts is
-not proporly set yet.
-
-** Estimating the total impacts
-
-with all of the previous information, we can run the estimation
-
-#+begin_src python :results output :exports both :session
-with open("boaviztapi/data/ml_setups/test_bloom.json",'r') as bloom:
-    bloom_model = json.load(bloom)
-out = run_experiment(bloom_model,"bloom")
-embodied = out["verbose"]["embodied impacts"]["gwp"]
-dynamic = out["verbose"]["dynamic impacts"]["gwp"]
-dynamic_energy = out['verbose']['dynamic energy consumption']
-print(f"embodied impacts gwp: {embodied}")
-print(f"dynamic impacts gwp: {dynamic}")
-print(f"dynamic energy consumption: {dynamic_energy}")
-#+end_src
-
-#+RESULTS:
-: estimated impacts: {'gwp': {'embodied': 15000.0, 'direct': 83100.0, 'total': 98000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 190000.0, 'direct': 18300000.0, 'total': 18000000.0, 'unit': 'MJ'}, 'adp': {'embodied': 1.3, 'direct': 0.0788, 'total': 1.3, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 1620000.0, 'unit': 'kWh'}}
-: to put impacts in perspective: {'relative_SNBC': {'value': 49.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 99.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 42.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-: embodied impacts gwp: {'server': 7000.0, 'gpus': 7600.0, 'unit': 'kgCO2eq'}
-: dynamic impacts gwp: {'value': 26800.0, 'gpus': 22400.0, 'ram': 1350.0, 'cpus': 3140.0, 'unit': 'kgCO2eq'}
-: dynamic energy consumption: {'value': 10900.0, 'unit': 'kWh'}
-
-we can see in the results (full result in results/datetime bloom.json) that we obtain close figures to those in the
-paper.
-with embodied impacts of 7T CO_2 e for the servers and 7.6T for the
-GPUs to compare with the 7.6T for the servers and 3.6 T for the GPUs
-in the paper. Most of the difference is due to estimated impacts of
-300 kgCO_2 e for one GPU while it was estimated to 125 kgCO_2 e in the
-paper.
-
-For the dynamic consumption, we obtain an estimate of 26.8T CO_2 e,
-mainly due to the GPUs (accountable for 25T, the only difference with
-the figure obtained in the paper being the slightly off conversion
-from real time to GPU hours) while the memory, not accounted for in
-the paper brings another 1.5T CO_2 e.
-
-The only thing that differs greatly is the value for the idle
-consumption. (not so surprising since figures differ quite a lot).
-
-* replicating results from [Bannour2021evaluating]
-
-** detailling the Hardware configurations
-the facility setup is the [[https://doc.lab-ia.fr/][LaBia]]. We can see that the only nodes using a
+the facility setup is the [[https://doc.lab-ia.fr/][LaBia]] cluster. We can see that the only nodes using a
 20 core CPU are: n[101-102]:
 
 -  2 x Intel Xeon Gold 6148 20 cores / 40 threads @ 2.4 GHz (Skylake)
@@ -255,91 +237,109 @@ the facility setup is the [[https://doc.lab-ia.fr/][LaBia]]. We can see that the
 
 using 32 GB of RAM and not the full 384.
 
-while the lab server is using one GTX 1080 Ti with 11GB of memory.
-it is a Dell PowerEdge R730 with 2 GTW 1080 Ti, 2 Intel Xeon E5-2620
-v4 CPU and 125 GB memory (only 11 of whihch are requested).
+The lab server on the other hand is the Segur machine, using one GTX 1080 Ti with 11GB of memory.
+it is a Dell PowerEdge R730 with 2 GTX 1080 Ti, 2 Intel Ben E5-2620
+v4 CPU and 125 GB memory (only 11 of which are requested).
 
 while we do not have the Intel Xeon Gold 6148 in our CPU database, we
-can see on [[https://www.intel.fr/content/www/fr/fr/products/sku/120489/intel-xeon-gold-6148-processor-27-5m-cache-2-40-ghz/specifications.html][Intel's website]] that it has a TDP of 150W, was realeased in
+can see on [[https://www.intel.fr/content/www/fr/fr/products/sku/120489/intel-xeon-gold-6148-processor-27-5m-cache-2-40-ghz/specifications.html][Intel's website]] that it has a \gls{TDP} of 150W, was released in
 2017 with a process of 14nm with the Skylake architecture, this is
 sufficient information to add one entry to our database, knowing the
 information about the Skylake architecture from [[https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server)][WikiChips]]. 
 
 ** Problems with the provided data
 
-*** incoherences between tables 3 and 4
-
 Results presented in the paper do not seem coherent from one table to
-the other. If we try to convert from energy consumption to carbon
+the other (tables 3 and 4). If we try to convert from energy consumption to carbon
 emissions using the presented carbon intensity of 39 gCO_2 e/kWh we do
 not at all find the same results as the ones presented.
 For instance, for the first method (Yu2020) for the French Press
 benchmark, it is indicated 1.38kWh consumption and 350.15g CO_2 e.
 
-#+begin_src python :results output :exports both
-print(39*1.38)
-#+end_src
-
-#+RESULTS:
-: 53.81999999999999
-
 We can see that if we are to use the presented carbon intensity, we
-get emissions of 53.8g for the 1.38kWh. This is really far from what
-is presented in the paper.
+get emissions of src_python{return round(39*1.38,1)}
+{{{results(=53.8=)}}} gCO_2 e for a 1.38kWh energy consumption. This is
+really far from the 350 gCO_2 e presented in the paper.
 
 *** Trying to understand the problem
 
-Let us check if the factor to convert from table 4 to table 3 is
-constant.
-If it is, it would maybe explain the problems. When filling the table
-the authors might have missclicked on the location and the Carbon
-Intensity used would just be the one of another country.
+ Let us check if the factor to convert from table 4 to table 3 is
+ constant.
+ If it is, it would maybe explain the problems. When filling the table
+ the authors might have miss-clicked on the location and the Carbon
+ Intensity used would just be the one of another country.
 
-#+begin_src python :results output :exports both
+ #+begin_src python :results output :exports none
 import numpy as np
 emissions = [350.15,260.26,16.67,14.31,20.68,20.03,104.4,102.08,3.83,4.99,5.57,5.67]
 energy = [1.38,1.03,0.07,0.06,0.08,0.08,0.41,0.40,.02,.02,.02,.02]
 CI = [em / en for en, em in zip(energy, emissions)]
 print(CI, np.mean(CI))
 
-#+end_src
+ #+end_src
 
-#+RESULTS:
-: [253.73188405797103, 252.6796116504854, 238.14285714285714, 238.50000000000003, 258.5, 250.375, 254.63414634146343, 255.2, 191.5, 249.5, 278.5, 283.5] 250.39695826606476
+ #+RESULTS:
+ : [253.73188405797103, 252.6796116504854, 238.14285714285714, 238.50000000000003, 258.5, 250.375, 254.63414634146343, 255.2, 191.5, 249.5, 278.5, 283.5] 250.39695826606476
 
-according to GA's v2.2 database, this carbon intensity of around 250gCO_2
-e/kWh would approximately correspond to Lithuania's one. According to
-the version 1.1 of the data (version seemingly used in the article),
-the closest one would be Hungary.
+ We obtain results around 250 gCO_2 e/kWh with some non negligible
+ variations (The smallest conversion factor is of 191.5 gCO_2 e/kWh
+ while the highest is of 283.5 gCO_2 e/kWh)
 
-Still, we can observe quite important variations in carbon intensity
-to convert from the presented energy consumption to the presented
-carbon emissions.
+ according to GA's v2.2 database, this carbon intensity of around 250gCO_2
+ e/kWh would approximately correspond to Lithuania's one. According to
+ the version 1.1 of the data (version seemingly used in the article),
+ the closest one would be Hungary.
+
+ Still, we can observe quite important variations in carbon intensity
+ to convert from the presented energy consumption to the presented
+ carbon emissions, this would tend to infirm the hypothesis of just an
+ error of selection in the carbon intensity used. 
+
+ Even if there are obviously problems with the presented data, we still
+ want to try and replicate the presented results. Indeed, if the data
+ is flawed only in the table presenting the energy consumption or only
+ in the table presented the carbon footprint, we might be able to
+ reproduce the results of one of the tables (i.e. either the
+ consumption or the carbon footprint)
 
 ** experiments
-It is said that the default PUE used is 1.67. In order to replicate
-the results, and even if the dynamic ratio and the PUE do not have the
+It is said that the default \gls{PUE} used is 1.67. In order to replicate
+the results, and even if the dynamic ratio and the \gls{PUE} do not have the
 same meaning. Since they are both used in the same way we will use a
 dynamic ratio of 1.67
 
 we can see in [[https://github.com/GreenAlgorithms/green-algorithms-tool/blob/master/data/latest/TDP_gpu.csv][the latest version of Green Algorithms' GPU TDP database]]
-that they have a TDP value of 300W for a Tesla V100 GPU whereas we
-have a TDP of 250W for the same card in our database. In order to see
+that they have a \gls{TDP} value of 300W for a Tesla V100 GPU whereas we
+have a \gls{TDP} of 250W for the same card in our database. In order to see
 if we can replicate the same consumption and see the difference
-resulting from this data-point incoherency we will try two
-versions. One with a V100 and one with a card with a TDP
+resulting from this data-point inconsistency we will try two
+versions. One with a V100 and one with a card with a \gls{TDP}
 of 300W in our database: the NVIDIA A100 PCIe 80 GB. This will of
 course also impact the manufacture impacts but we are here only focusing on
 reproducing the same direct impacts
 
+#+begin_src python :results value raw :exports results :session
+table = pd.read_csv("expected/expected_bannour.csv", header=[0,1,2,3])
 
-#+begin_src python :results output :exports both :session
+index =  pd.MultiIndex.from_tuples(table.columns.values)
+index = index.set_levels(['Facility only', '', '','','','','',''], level=2, verify_integrity=False)
+table.columns = index
+
+rename_multi_index(table, ('Method','Unnamed: 0_level_1','','Unnamed: 0_level_3'), ('Method', '','', ''))
+rename_multi_index(table,('Task','Unnamed: 1_level_1','','Unnamed: 1_level_3'), ('Task','','', ''))
+rename_multi_index(table,('Hardware','Unnamed: 2_level_1','','Unnamed: 2_level_3'),('Hardware','','', ''))
+
+
+def set(method, task, hardware, col, value):
+    table.loc[(table[('Method','','','')] == method) & (table[('Task','','','')] == task) & (table[('Hardware','','','')] == hardware), col] = value
+
 with open("boaviztapi/data/ml_setups/LaBia.json", 'r') as m:
     labia = json.load(m)
 with open("boaviztapi/data/ml_setups/Segur.json", 'r') as m:
     segur = json.load(m)
 
 labia["server"]["configuration"]["ram"][0]["capacity"] = 32
+segur["server"]["configuration"]["ram"][0]["capacity"] = 11
 
 labia["gpu"][0]['units'] = 1
 segur["gpu"][0]['units'] = 1
@@ -353,22 +353,30 @@ segur['usage']['gwp_factor'] = 39E-3
 labia['usage']['dynamic_ratio'] = 1.67
 segur['usage']['dynamic_ratio'] = 1.67
 
+
+
 def estimate(model, task, time_server, time_facility):
    print(task)
    print('server')
    segur["usage"][ "minute_use_time"] = time_server
    output = run_experiment(segur, model + '_' + task + '_Server', directory='Bannour2021evaluating', silent=True)
-   print_gwp_and_energy(output)
+   energy, gwp = print_gwp_and_energy(output)
+   set(model, task, "Server", ('Estimated', 'Energy', '','(kWh)'), energy)
+   set(model, task, "Server", ('Estimated', 'Carbon','','(gCO2e)'), gwp * 1000)
    print('Facility')
    labia["gpu"][0]["model"] = "NVIDIA Tesla V100 PCIe 32 GB"
    labia["usage"][ "minute_use_time"] = time_facility
    output = run_experiment(labia, model + '_' + task + '_Facility', directory='Bannour2021evaluating', silent=True)
-   print_gwp_and_energy(output)
+   energy, gwp = print_gwp_and_energy(output)
+   set(model, task, 'Facility', ('Estimated', 'Energy','', '(kWh)'), energy)
+   set(model, task, 'Facility', ('Estimated', 'Carbon','','(gCO2e)'), gwp * 1000)
    print('Facility same TDP')
    labia["gpu"][0]["model"] = "NVIDIA A100 PCIe 80 GB"
    labia["usage"][ "minute_use_time"] = time_facility
    output = run_experiment(labia, model + '_' + task + '_Facility_match_TDP', directory='Bannour2021evaluating', silent=True)
-   print_gwp_and_energy(output)
+   energy, gwp = print_gwp_and_energy(output)
+   set(model, task, 'Facility', ('Estimation', 'trying to match', 'Facility only','(kWh)'), energy)
+   set(model, task, 'Facility', ('Estimation', 'trying to match', 'Facility only', '(gCO2e)'), gwp * 1000)
 
 print('Yu2020')
 estimate("Yu2020", "French Press", 163 + 39/60, 118 + 4/60)
@@ -379,116 +387,254 @@ print('\nMa2016')
 estimate("Ma2016", "French Press", 58 + 30/60, 46 + 44/60)
 estimate("Ma2016", "EMEA", 2 + 14/60, 2 + 27/60)
 estimate("Ma2016", "MEDLINE", 3 + 11/60, 2 + 58/60)  
+
+multi_index_to_multiline_header(table)
+to_org_table(table)
 #+end_src
 
 #+RESULTS:
-#+begin_example
-Yu2020
-French Press
-server
-energy consumption: {'value': 1.16, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.034, 'direct': 0.0451, 'total': 0.079, 'unit': 'kgCO2eq'}
-Facility
-energy consumption: {'value': 0.861, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.032, 'direct': 0.0336, 'total': 0.066, 'unit': 'kgCO2eq'}
-Facility same TDP
-energy consumption: {'value': 1.03, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.039, 'direct': 0.04, 'total': 0.079, 'unit': 'kgCO2eq'}
-EMEA
-server
-energy consumption: {'value': 0.0673, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.002, 'direct': 0.00262, 'total': 0.0046, 'unit': 'kgCO2eq'}
-Facility
-energy consumption: {'value': 0.0499, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.0019, 'direct': 0.00195, 'total': 0.0038, 'unit': 'kgCO2eq'}
-Facility same TDP
-energy consumption: {'value': 0.0595, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.0023, 'direct': 0.00232, 'total': 0.0046, 'unit': 'kgCO2eq'}
-MEDLINE
-server
-energy consumption: {'value': 0.0843, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.0025, 'direct': 0.00329, 'total': 0.0058, 'unit': 'kgCO2eq'}
-Facility
-energy consumption: {'value': 0.0669, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.0025, 'direct': 0.00261, 'total': 0.0051, 'unit': 'kgCO2eq'}
-Facility same TDP
-energy consumption: {'value': 0.0797, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.0031, 'direct': 0.00311, 'total': 0.0062, 'unit': 'kgCO2eq'}
+| Method | Task         | Hardware | Expected | Estimated |      Estimation | Expected | Estimated |      Estimation |
+|        |              |          |   Energy |    Energy | trying to match |   Carbon |    Carbon | trying to match |
+|        |              |          |          |           |   Facility only |          |           |   Facility only |
+|        |              |          |    (kWh) |     (kWh) |           (kWh) |  (gCO2e) |   (gCO2e) |         (gCO2e) |
+|--------+--------------+----------+----------+-----------+-----------------+----------+-----------+-----------------|
+| Yu2020 | French Press | Server   |     1.38 |      1.16 |             nan |   350.15 |      45.1 |             nan |
+| Yu2020 | French Press | Facility |     1.03 |     0.861 |            1.03 |   260.26 |      33.6 |              40 |
+| Yu2020 | EMEA         | Server   |     0.07 |    0.0673 |             nan |    16.67 |      2.62 |             nan |
+| Yu2020 | EMEA         | Facility |     0.06 |    0.0499 |          0.0595 |    14.31 |      1.95 |            2.32 |
+| Yu2020 | MEDLINE      | Server   |     0.08 |    0.0843 |             nan |    20.68 |      3.29 |             nan |
+| Yu2020 | MEDLINE      | Facility |     0.08 |    0.0669 |          0.0797 |    20.03 |      2.61 |            3.11 |
+| Ma2016 | French Press | Server   |     0.41 |     0.414 |             nan |    104.4 |      16.1 |             nan |
+| Ma2016 | French Press | Facility |      0.4 |     0.341 |           0.406 |   102.08 |      13.3 |            15.8 |
+| Ma2016 | EMEA         | Server   |     0.02 |    0.0158 |             nan |      3.8 |     0.616 |             nan |
+| Ma2016 | EMEA         | Facility |     0.02 |    0.0179 |          0.0213 |     4.99 |     0.697 |            0.83 |
+| Ma2016 | MEDLINE      | Server   |     0.02 |    0.0225 |             nan |     5.57 |     0.878 |             nan |
+| Ma2016 | MEDLINE      | Facility |     0.02 |    0.0216 |          0.0258 |     5.67 |     0.843 |               1 |
 
-Ma2016
-French Press
-server
-energy consumption: {'value': 0.414, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.012, 'direct': 0.0161, 'total': 0.028, 'unit': 'kgCO2eq'}
-Facility
-energy consumption: {'value': 0.341, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.013, 'direct': 0.0133, 'total': 0.026, 'unit': 'kgCO2eq'}
-Facility same TDP
-energy consumption: {'value': 0.406, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.016, 'direct': 0.0158, 'total': 0.031, 'unit': 'kgCO2eq'}
-EMEA
-server
-energy consumption: {'value': 0.0158, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.00046, 'direct': 0.000616, 'total': 0.0011, 'unit': 'kgCO2eq'}
-Facility
-energy consumption: {'value': 0.0179, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.00066, 'direct': 0.000697, 'total': 0.0014, 'unit': 'kgCO2eq'}
-Facility same TDP
-energy consumption: {'value': 0.0213, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.00082, 'direct': 0.00083, 'total': 0.0016, 'unit': 'kgCO2eq'}
-MEDLINE
-server
-energy consumption: {'value': 0.0225, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.00066, 'direct': 0.000878, 'total': 0.0015, 'unit': 'kgCO2eq'}
-Facility
-energy consumption: {'value': 0.0216, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.0008, 'direct': 0.000843, 'total': 0.0016, 'unit': 'kgCO2eq'}
-Facility same TDP
-energy consumption: {'value': 0.0258, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.00099, 'direct': 0.001, 'total': 0.002, 'unit': 'kgCO2eq'}
-#+end_example
-
-
-we obtain the following results :
-
-| Method | Task         | Hardware | Expected Energy | Estimated energy | Estimation trying to match | Expected Carbon | Estimated Carbon | Estimation trying to match |
-|        |              |          |           (kWh) |            (kWh) |       Facility only, (kWh) |       (g CO_2 e) |        (g CO_2 e) |       Facility only, (kWh) |
-|--------+--------------+----------+-----------------+------------------+----------------------------+-----------------+------------------+----------------------------|
-| Yu2020 | French Press | Server   |            1.38 |             1.16 |                            |          350.15 |               45 |                            |
-|        |              | Facility |            1.03 |           0 .861 |                       1.03 |          260.26 |               33 |                         40 |
-|        | EMEA         | Server   |            0.07 |            0.067 |                            |           16.67 |             2.62 |                            |
-|        |              | Facility |            0.06 |           0.0499 |                     0.0595 |           14.31 |             1.95 |                       2.32 |
-|        | MEDLINE      | Server   |            0.08 |           0.0843 |                            |           20.68 |             3.29 |                            |
-|        |              | Facility |            0.08 |           0.0669 |                     0.0797 |           20.03 |             2.61 |                       3.11 |
-|--------+--------------+----------+-----------------+------------------+----------------------------+-----------------+------------------+----------------------------|
-| Ma2016 | French Press | Server   |            0.41 |            0.414 |                            |           104.4 |             16.1 |                            |
-|        |              | Facility |            0.40 |            0.341 |                      0.406 |          102.08 |             13.3 |                       15.8 |
-|        | EMEA         | Server   |            0.02 |           0.0158 |                            |            3.83 |            0.616 |                            |
-|        |              | Facility |            0.02 |           0.0179 |                     0.0225 |            4.99 |            0.697 |                       0.83 |
-|        | MEDLINE      | Server   |            0.02 |           0.0225 |                            |            5.57 |            0.878 |                            |
-|        |              | Facility |            0.02 |           0.0216 |                     0.0258 |            5.67 |            0.843 |                          1 |
-
-We can see that we are able to obtain the same exact consumption
+We can see that we are able to obtain the same exact energy consumption
 estimates up to rounding (when we do the modifications to the inputed setup for the
 facility) except for Yu2020, French Press, Server where we have a
 slightly lower estimation than the one proposed in the paper.
 We can also see that, as expected, the estimates we do when
 considering the "real" setup are lower than the ones presented in the
-paper and this can be entirely explained by the difference in TDP in
+paper and this can be entirely explained by the difference in \gls{TDP} in
 the database.
 We can also conclude that the problem in the presented data lies in
 the estimates of the carbon footprint and not in the estimates of
 energy consumption.
 
 
-* replicating results from [Dinarelli2022toward]
+* replicating results from \cite{Jay2023experimental} 
 
+In order to replicate the results from the paper, we first need to
+gather some information from the paper and its supplementary material
+which is designed to allow for reproducible experiments.
+
+- The hardware used is a Nvidia DGX-1 with two Intel Xeon E5-2698 v4,
+512 GB of memory and 8 NVIDIA Tesla V100-SXM2-32GB. 
+
+- The Carbon Intensity for France used in Green Algorithms V2.2 is
+51.28gCO_2 e/kWh ([[https://github.com/GreenAlgorithms/green-algorithms-tool/blob/master/data/latest/CI_aggregated.csv][latest version of Green Algorithms' Carbon Intensity
+Database]])
+
+- To convert from kWh to kJ, one must multiply the result by 3.6E+3.
+
+we can see in [[https://github.com/GreenAlgorithms/green-algorithms-tool/blob/master/data/latest/TDP_gpu.csv][the latest version of Green Algorithms' GPU TDP database]]
+that they have a \gls{TDP} value of 300W for an NVIDIA V100 GPU whereas we
+have a \gls{TDP} of 250W for the same card in our database. As a first
+version, just to see if we are able to obtain the same exact results
+as those presented in the paper, we will use as GPUs a card with a \gls{TDP}
+of 300W in our database: the NVIDIA A100 PCIe 80 GB.
+
+We can also see that the CPU model used is the Xeon E5-2698 v4 with a
+tdp 135. However, it isn't available in Green Algorithm, the model
+used is the Xeon E5-2697 v4 with a \gls{TDP} of 145W and 18 cores.
+In order to reproduce the results presented in the paper, we will use
+in our setup one CPU with 40 cores, a \gls{TDP} of 324W (145/18*40) and a
+die size of 9.12cm² (2*the die size of a Xeon E5-2698 v4, not relevant
+for the computation of energy)
+
+In the notebook accompanying the paper, we can see that the link explaining the configuration used for the CPU benchmarks are
+exact copies of the ones for GPU benchmarks. We will therefore assume
+that the CPU usage was 1 and GPU usage was 0. This configuration leads
+to an energy consumption of 8.58Wh for one minute. Since this value is
+strangely similar to the value of 7.58Wh/min used in the paper, we will also assume that there was a mistake when copying
+results from the Green Algorithm website and therefore use the value
+of 8.58Wh/min instead of the value of 7.58Wh/min to compute the
+expected results.
+
+#+begin_src python :results output :exports none :session
+with open("boaviztapi/data/ml_setups/Nvidia_DGX-1.json", 'r') as m:
+    dgx_1_model = json.load(m)
+    dgx_1_model_correct = copy.deepcopy(dgx_1_model)
+
+def get_energy_joules(results):
+    energy_kWh = results['impacts']['energy consumption']['value']
+    energy_J = 3.6E3*energy_kWh
+    return(f"energy consumption: {energy_J:.3f} kJ", energy_J)
+
+# expected results
+online_tools = {}
+
+# GPU
+online_tools['Green Algorithm GPU'] = {}
+online_tools['Green Algorithm GPU']['EP'] = (43.18 * 68 / 60) * 3.6 # converting to joules https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=1&memory=512&platformType=localServer
+online_tools['Green Algorithm GPU']['LU'] = (31.18 * 204 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0.7&memory=512&platformType=localServer
+online_tools['Green Algorithm GPU']['MG'] = (14.26 * 157 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0.2&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0.25&memory=512&platformType=localServer
+online_tools['Green Algorithm GPU']['idle'] = (2.29 * 157 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0&memory=512&platformType=localServer
+
+# CPU
+online_tools['Green Algorithm CPU'] = {}
+online_tools['Green Algorithm CPU']['EP'] = (8.58 * 50 / 60) * 3.6 # converting to joules https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=1&memory=512&platformType=localServer
+online_tools['Green Algorithm CPU']['LU'] = (8.58 * 30 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0.7&memory=512&platformType=localServer
+online_tools['Green Algorithm CPU']['MG'] = (8.58 * 125 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0.2&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0.25&memory=512&platformType=localServer
+online_tools['Green Algorithm CPU']['idle'] = (0 * 60 / 60) * 3.6 
+
+def experiment(model, core_type, task, benchmark, cpu_usage, gpu_usage, time):
+    print(benchmark)
+    model['cpu_usage'] = cpu_usage
+    model['gpu_usage'] = gpu_usage
+    model['usage']['minute_use_time'] = time
+    output = run_experiment(model, f'{core_type}_{benchmark}_{task}', directory='Jay2023experimental')
+    s, r = get_energy_joules(output)
+    diff ="{:.3f}".format(r - online_tools['Green Algorithm ' + core_type][benchmark])
+    print(s, f"difference from expectation: {diff} kJ")
+    return r, diff
+
+
+
+def experiments_gpu(model, task):
+    print('GPU benchmark')
+    df = pd.DataFrame(columns=['Benchmark','Value (kJ)','Difference (kJ)'])
+    
+    energy, diff = experiment(model, 'GPU', task, 'EP', 0, 1, 68/60)
+    df = df.append({'Benchmark':'EP','Difference (kJ)':diff,'Value (kJ)':energy}, ignore_index=True)
+    energy, diff = experiment(model, 'GPU', task,'LU', 0, .7, 204/60)
+    df = df.append({'Benchmark':'LU','Difference (kJ)':diff,'Value (kJ)':energy}, ignore_index=True)
+    energy, diff = experiment(model, 'GPU', task,'MG', .2, .25, 157/60)
+    df = df.append({'Benchmark':'MG','Difference (kJ)':diff,'Value (kJ)':energy}, ignore_index=True)
+    return df
+
+def experiments_cpu(model, task):
+    print('\nCPU benchmark')
+    df = pd.DataFrame(columns=['Benchmark','Value (kJ)','Difference (kJ)'])
+    energy, diff = experiment(model, 'CPU', task, 'EP', 1, 0, 50/60)
+    df = df.append({'Benchmark':'EP','Difference (kJ)':diff,'Value (kJ)':energy}, ignore_index=True)
+    energy, diff = experiment(model, 'CPU', task, 'LU', 1, 0, 30/60)
+    df = df.append({'Benchmark':'LU','Difference (kJ)':diff,'Value (kJ)':energy}, ignore_index=True)
+    energy, diff = experiment(model, 'CPU', task, 'MG', 1, 0, 125/60)
+    df = df.append({'Benchmark':'MG','Difference (kJ)':diff,'Value (kJ)':energy}, ignore_index=True)
+    return df
+
+
+def experiments(model,task):
+    experiments_gpu(model, task)
+    experiments_cpu(model, task)
+
+
+
+#print('Replicating the exact results')
+
+dgx_1_model['server']['configuration']['cpu'] = {
+          "units": 1,
+          "die_size": 9.12,
+	  "tdp": 324,
+	  "core_units":40
+}
+dgx_1_model['gpu'] = [
+  {
+      "units": 8,
+      "model": "NVIDIA A100 PCIe 80 GB"
+  }
+]
+
+#experiments(dgx_1_model)
+#print('\nRunning the experiments with the "correct" setup')
+#experiments(dgx_1_model_correct)
+#+end_src
+
+#+RESULTS:
+
+When trying to obtain the exact same results (same hardware setup as used for
+obtaining values with Green Algorithms)
+for the GPU benchmark
+#+begin_src python :results value raw :exports results :session
+to_org_table(experiments_gpu(dgx_1_model, 'match'))
+#+end_src
+
+#+RESULTS:
+| Benchmark | Value (kJ) | Difference (kJ) |
+|-----------+------------+-----------------|
+| EP        |     176.04 |          -0.134 |
+| LU        |      381.6 |          -0.043 |
+| MG        |     134.28 |          -0.049 |
+
+for the CPU benchmarks
+#+begin_src python :results value raw :exports results :session
+to_org_table(experiments_cpu(dgx_1_model, 'match'))
+#+end_src
+
+#+RESULTS:
+| Benchmark | Value (kJ) | Difference (kJ) |
+|-----------+------------+-----------------|
+| EP        |      25.74 |               0 |
+| LU        |     15.444 |               0 |
+| MG        |      64.44 |            0.09 |
+
+
+When using the hardware setup really used:
+for the GPU benchmark
+#+begin_src python :results value raw :exports results :session
+to_org_table(experiments_gpu(dgx_1_model_correct, 'correct'))
+#+end_src
+
+#+RESULTS:
+| Benchmark | Value (kJ) | Difference (kJ) |
+|-----------+------------+-----------------|
+| EP        |     149.04 |         -27.134 |
+| LU        |     324.36 |         -57.283 |
+| MG        |        117 |         -17.329 |
+
+for the CPU benchmarks
+#+begin_src python :results value raw :exports results :session
+to_org_table(experiments_cpu(dgx_1_model_correct, 'correct'))
+#+end_src
+
+#+RESULTS:
+| Benchmark | Value (kJ) | Difference (kJ) |
+|-----------+------------+-----------------|
+| EP        |      23.04 |            -2.7 |
+| LU        |     13.824 |           -1.62 |
+| MG        |       57.6 |           -6.75 |
+
+We can see that we are able to obtain results that are exactly the
+same as the expected ones up to rounding errors (difference 3 orders of magnitude
+lesser than the value). We can also see that even though the input
+value to Green Algorithms does not exactly correspond to the hardware
+setup used, the difference to the expected
+results isn't too high. The difference between our estimate using
+'correct' data and the expected values is around 10 times less than the estimated value..
+These results demonstrate the importance of inputting the right
+hardware if one wants precise results.
+
+* replicating results from \cite{Dinarelli2022toward}
+
+As for other experiments aiming at reproducing results, we first need
+to gather enough information to run our 
+experiments. We will also check the consistency of the results
+presented in the paper. This will allow us to run our estimates.
+We will focus on two results that we will try to reproduce. First the
+fine tuning of the SSL model which is the most time consuming task
+presented and then we will focus on the training time for the spectro
+model, this should allow us to get a good overview of the results.
+
+** setup experiments                                               :noexport:
 First, let us define a prototype ml setup. We will use it to define
 the different hardware configurations. This will help us easily run
 the different experiments to reconstruct the results from the
 different tables.
 
-  #+begin_src python :results both :exports both :session
+  #+begin_src python :results both :exports none :session
 model = {
 "server": {},
 "gpu": [],
@@ -513,9 +659,11 @@ model = {
 ** Trying to find information about the hardware setup
 
 The authors gave us some insight on the hardware used for running
-their experiments.
+their experiments. Without their help, we would not have been able to
+produce a single estimate. 
 
-#+begin_quote
+*** quote from the author                                          :noexport:
+#+begin_quote 
 En tout cas, pour essayer de te donner les info dont tu as besoin, après si c'est pas ça, ou si tu as besoin d'autres informations, n'hésite pas à demander :
 "CPU : nombre de coeurs utilisés, modèle" => je ne sais pas combien de coeur CPU sont utilisé par les modèles wav2vec que j'ai utilisé, mes modèles SLU en utilise un seul.
 "GPU : nombre utilisés et modèles, mémoire utilisée" (je présume que
@@ -553,7 +701,7 @@ GPU.
 
 these nodes have the following hardware configuration :
         +  2 Intel Cascade Lake 6248 (20 cores at 2,5 GHz)
-        +  192 GB de memory per node
+        +  192 GB  memory per node
         +  4 GPU Nvidia Tesla V100 SXM2 32 GB
 
 Because we do not have the Intel Cascade Lake 6248 in our database, we
@@ -562,14 +710,14 @@ that it is a processor of the Cascade Lake architecture. On [[https://en.wikichi
 we can see that Cascade Lake Processors use dies largely similar to
 those of the [[https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(server)#Core][Skylake cores]]. Combining all of these pieces of
 information, we can get an estimation of the details of an Intel
-Cascade Lage 6248 :
+Cascade Lake 6248 :
 model: "Xeon Gold 6248"
 manufacture date: "2019"
 process: 14nm
 number of cores: 20
 die size: 694 mm² (XCC configuration)
 
-#+begin_src python :results output :exports both :session
+#+begin_src python :results output :exports none :session
 jean_zay = copy.deepcopy(model)
 jean_zay["server"]["configuration"] = {
     "cpu": {
@@ -604,7 +752,7 @@ additional information on the hardware used.
 Since we do not know any more precise information, we will use the
 default values of our tool to complete the missing pieces of information
 
-    #+begin_src python :results output :exports both :session
+    #+begin_src python :results output :exports none :session
 
 training_SLU_model = copy.deepcopy(model)
 training_SLU_model["gpu"] = [
@@ -642,14 +790,7 @@ are written in the french notation with "," separating units from
 decimals and not the usual ".".
 For instance, if we look at the first line of table 1, we can read
 a consumption of 4,473 kWh, that we can translate to 4.473 kWh.
-#+begin_src python :results output :exports both
-print(4.473*51)
-#+end_src
-
-#+RESULTS:
-: 228.123
-
-We obtain 228.123g CO_2 e, the same value as indicated in the paper.
+We obtain src_python{return 4.473*51} {{{results(=228.123=)}}}g CO_2 e, the same value as indicated in the paper.
 
 We then only need to be able to find coherent energy consumption
 values to obtain comparable results.
@@ -658,7 +799,7 @@ values to obtain comparable results.
 
 *** fine tuning of the SSL model
 
-    #+begin_src python :results output :exports both :session
+    #+begin_src python :results output :exports none :session
 jean_zay["usage"]["hours_use_time"] = 100
 jean_zay["usage"]["minute_use_time"] = 0
 output = run_experiment(jean_zay, "fine_tuning_SSL", directory='Dinarelli2022toward')
@@ -677,270 +818,58 @@ impacts and a dynamic consumption of 107 kWh, which is close to the
 results aren't a perfect match and slightly higher than presented can
 be explained by the fact that measures presented were carried out
 based on a measurement tool (CarbonTracker). (results presented are
-borrowed from [Evain2021task] using the methodology from [parcollet2021energy])
+borrowed from \cite{Evain2021task} using the methodology from \cite{parcollet2021energy})
 
 *** Table 1
 
-    #+begin_src python :results output :exports both :session
+    #+begin_src python :result value raw :exports results :session
+table = pd.read_csv('expected/expected_dinarelli.csv', header=[0,1])
+rename_multi_index(table, ('model', 'Unnamed: 0_level_1'), ('model', ''))
+
+def set(model, col, value):
+    table.loc[table[('model','')] == model, col] = value
+
+
 def estimate(steps, hours, minutes):
-    print(f"spectro {steps} steps :")
+    name = f"spectro {steps} steps"
+    print(name +  ":")
     training_SLU_model['usage']['hours_use_time'] = hours
     training_SLU_model['usage']['minute_use_time'] = minutes
     output = run_experiment(training_SLU_model, f'PortMEDIA_spectro_{steps}-steps',  directory='Dinarelli2022toward')
-    print_gwp_and_energy(output)
+    energy, gwp = print_gwp_and_energy(output)
+    set(name, ('estimated', 'power (kWh)'), energy)
+    set(name, ('estimated', 'carbon (gCO2e)'), int(gwp * 1000))
 
 estimate(3,36,14)
 estimate(2,24,14)
 estimate(1,15,52)
 
+to_org_table(multi_index_to_multiline_header(table))
     #+end_src
 
     #+RESULTS:
-    #+begin_example
-    spectro 3 steps :
-    estimated impacts: {'gwp': {'embodied': 0.7, 'direct': 0.517, 'total': 1.2, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 9.4, 'direct': 114.0, 'total': 120.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.00014, 'direct': 4.93e-07, 'total': 0.00014, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 10.1, 'unit': 'kWh'}}
-    to put impacts in perspective: {'relative_SNBC': {'value': 0.00061, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.0012, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.0044, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-    energy consumption: {'value': 10.1, 'unit': 'kWh'}
-    dynamic impacts gwp: {'embodied': 0.7, 'direct': 0.517, 'total': 1.2, 'unit': 'kgCO2eq'}
-    spectro 2 steps :
-    estimated impacts: {'gwp': {'embodied': 0.47, 'direct': 0.346, 'total': 0.81, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 6.3, 'direct': 76.5, 'total': 83.0, 'unit': 'MJ'}, 'adp': {'embodied': 9.3e-05, 'direct': 3.3e-07, 'total': 9.4e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 6.78, 'unit': 'kWh'}}
-    to put impacts in perspective: {'relative_SNBC': {'value': 0.00041, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.00083, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.003, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-    energy consumption: {'value': 6.78, 'unit': 'kWh'}
-    dynamic impacts gwp: {'embodied': 0.47, 'direct': 0.346, 'total': 0.81, 'unit': 'kgCO2eq'}
-    spectro 1 steps :
-    estimated impacts: {'gwp': {'embodied': 0.31, 'direct': 0.226, 'total': 0.53, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 4.1, 'direct': 50.1, 'total': 54.0, 'unit': 'MJ'}, 'adp': {'embodied': 6.1e-05, 'direct': 2.16e-07, 'total': 6.1e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 4.44, 'unit': 'kWh'}}
-    to put impacts in perspective: {'relative_SNBC': {'value': 0.00027, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.00054, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.0019, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-    energy consumption: {'value': 4.44, 'unit': 'kWh'}
-    dynamic impacts gwp: {'embodied': 0.31, 'direct': 0.226, 'total': 0.53, 'unit': 'kgCO2eq'}
-    #+end_example
-We obtain the following results :
-- spectro 3 steps: 10.1kWh, 517g CO_2 e (vs 4.473kWh and 228gCO_2 e in
-  the paper)
-- spectro 2 steps: 6.78kWh, 346g CO_2 e (vs 2.989kWh and 152gCO_2 e in
-  the paper)
-- spectro 1 step: 4.44kWh, 226g CO_2 e (vs 1.708kWh and 87gCO_2 e in
-  the paper)
+    : | model           |       expected |     estimated |         expected |        estimated |
+    : |                 |    power (kWh) |   power (kWh) |   carbon (gCO2e) |   carbon (gCO2e) |
+    : |-----------------+----------------+---------------+------------------+------------------|
+    : | spectro 3 steps |          4.473 |         10.1  |              228 |              517 |
+    : | spectro 2 steps |          2.989 |          6.78 |              152 |              346 |
+    : | spectro 1 step  |          1.708 |          4.44 |               87 |              226 |
+
 We can see that we obtain carbon emission estimates around 3 times higher than
 those presented in the paper. It is expected that we obtain higher
-estimates than the measurements as presented in [Jay2023experimental]
+estimates than the measurements as presented in \cite{Jay2023experimental}
 
-* replicating results from [Jay2023experimental] 
+* results from \cite{Cattan2022benchmarking}
 
-The hardware used is a Nvidia DGX-1 with two Intel Xeon E5-2698 v4,
-512 GB of memory and 8 NVIDIA Tesla V100-SXM2-32GB. 
+This paper studies the gains and impacts of choosing to use one type
+of NLP model in a system. It evaluates the impacts of training the
+models but also of running inferences.
 
-The Carbon Intensity for France used in Green Algorithms V2.2 is
-51.28gCO_2 e/kWh ([[https://github.com/GreenAlgorithms/green-algorithms-tool/blob/master/data/latest/CI_aggregated.csv][latest version of Green Algorithms' Carbon Intensity
-Database]])
-
-To convert from kWh to kJ, one must multiply the result by 3.6E+3.
-
-we can see in [[https://github.com/GreenAlgorithms/green-algorithms-tool/blob/master/data/latest/TDP_gpu.csv][the latest version of Green Algorithms' GPU TDP database]]
-that they have a TDP value of 300W for an NVIDIA V100 GPU whereas we
-have a TDP of 250W for the same card in our database. As a first
-version, just to see if we are able to obtain the same exact results
-as those presented in the paper, we will use as GPUs a card with a TDP
-of 300W in our database: the NVIDIA A100 PCIe 80 GB.
-
-We can also see that the CPU model used is the Xeon E5-2698 v4 with a
-tdp 135. However, it isn't available in Green Algorithm, the model
-used is the Xeon E5-2697 v4 with a TDP of 145W and 18 cores.
-In order to reproduce the results presented in the paper, we will use
-in our setup one CPU with 40 cores, a TDP of 324W (145/18*40) and a
-die size of 9.12cm² (2*the die size of a Xeon E5-2698 v4, not relevant
-for the computation of energy)
-
-The link explaining the configuration used for the CPU benchmarks are
-exact copies of the ones for GPU benchmarks. We will therefore assume
-that the cpu usage was 1 and gpu usage was 0. This configuration leads
-to an energy consumption of 8.58Wh for one minute. Since this value is
-strangely similar to the value of 7.58Wh/min originaly presented in
-the paper. We will also assume that there was a mistake when copying
-results from the Green Algorithm website and therefore use the value
-of 8.58Wh/min instead of the value of 7.58Wh/min to compute the
-expected results.
-
-#+begin_src python :results output :exports both :session
-import copy
-
-with open("boaviztapi/data/ml_setups/Nvidia_DGX-1.json", 'r') as m:
-    dgx_1_model = json.load(m)
-    dgx_1_model_correct = copy.deepcopy(dgx_1_model)
-
-def get_energy_joules(results):
-    energy_kWh = results['impacts']['energy consumption']['value']
-    energy_J = 3.6E3*energy_kWh
-    return(f"energy consumption: {energy_J:.3f} kJ", energy_J)
-
-# expected results
-online_tools = {}
-
-# GPU
-online_tools['Green Algorithm GPU'] = {}
-online_tools['Green Algorithm GPU']['EP'] = (43.18 * 68 / 60) * 3.6 # converting to joules https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=1&memory=512&platformType=localServer
-online_tools['Green Algorithm GPU']['LU'] = (31.18 * 204 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0.7&memory=512&platformType=localServer
-online_tools['Green Algorithm GPU']['MG'] = (14.26 * 157 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0.2&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0.25&memory=512&platformType=localServer
-online_tools['Green Algorithm GPU']['idle'] = (2.29 * 157 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0&memory=512&platformType=localServer
-
-# CPU
-online_tools['Green Algorithm CPU'] = {}
-online_tools['Green Algorithm CPU']['EP'] = (8.58 * 50 / 60) * 3.6 # converting to joules https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=1&memory=512&platformType=localServer
-online_tools['Green Algorithm CPU']['LU'] = (8.58 * 30 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0.7&memory=512&platformType=localServer
-online_tools['Green Algorithm CPU']['MG'] = (8.58 * 125 / 60) * 3.6 # https://green-algorithms.org//?runTime_hour=0&runTime_min=1&appVersion=v2.2&locationContinent=Europe&locationCountry=France&locationRegion=FR&PUEradio=Yes&PUE=1&coreType=Both&numberCPUs=40&CPUmodel=Xeon%20E5-2697%20v4&usageCPUradio=Yes&usageCPU=0.2&numberGPUs=8&GPUmodel=NVIDIA%20Tesla%20V100&usageGPUradio=Yes&usageGPU=0.25&memory=512&platformType=localServer
-online_tools['Green Algorithm CPU']['idle'] = (0 * 60 / 60) * 3.6 
-
-def experiment(model, core_type, benchmark, cpu_usage, gpu_usage, time):
-    print(benchmark)
-    model['cpu_usage'] = cpu_usage
-    model['gpu_usage'] = gpu_usage
-    model['usage']['minute_use_time'] = time
-    output = run_experiment(dgx_1_model, f'{core_type}_{benchmark}', directory='Jay2023experimental')
-    s, r = get_energy_joules(output)
-    diff ="{:.3f}".format(r - online_tools['Green Algorithm ' + core_type][benchmark])
-    print(s, f"difference from expectation: {diff} kJ")
-
-def experiments(model):
-    print('GPU benchmark')
-
-    experiment(model, 'GPU', 'EP', 0, 1, 68/60)
-    experiment(model, 'GPU', 'LU', 0, .7, 204/60)
-    experiment(model, 'GPU', 'MG', .2, .25, 157/60)
-
-    print('\nCPU benchmark')
-
-    experiment(model, 'CPU', 'EP', 1, 0, 50/60)
-    experiment(model, 'CPU', 'LU', 1, 0, 30/60)
-    experiment(model, 'CPU', 'MG', 1, 0, 125/60)
-
-print('Replicating the exact results')
-
-dgx_1_model['server']['configuration']['cpu'] = {
-          "units": 1,
-          "die_size": 9.12,
-	  "tdp": 324,
-	  "core_units":40
-}
-dgx_1_model['gpu'] = [
-  {
-      "units": 8,
-      "model": "NVIDIA A100 PCIe 80 GB"
-  }
-]
-
-experiments(dgx_1_model)
-
-print('\nRunning the experiments with the "correct" setup')
-
-experiments(dgx_1_model_correct)
-
-
-
-#+end_src
-
-#+RESULTS:
-#+begin_example
-Replicating the exact results
-GPU benchmark
-EP
-estimated impacts: {'gwp': {'embodied': 0.0021, 'direct': 0.00251, 'total': 0.0047, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.027, 'direct': 0.552, 'total': 0.58, 'unit': 'MJ'}, 'adp': {'embodied': 1.7e-07, 'direct': 2.38e-09, 'total': 1.7e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0489, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2.3e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.7e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 5.4e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: 176.040 kJ difference from expectation: -0.134 kJ
-LU
-estimated impacts: {'gwp': {'embodied': 0.0064, 'direct': 0.00544, 'total': 0.012, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.081, 'direct': 1.2, 'total': 1.3, 'unit': 'MJ'}, 'adp': {'embodied': 5.1e-07, 'direct': 5.15e-09, 'total': 5.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.106, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 5.9e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 1.2e-05, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1.6e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: 381.600 kJ difference from expectation: -0.043 kJ
-MG
-estimated impacts: {'gwp': {'embodied': 0.005, 'direct': 0.00191, 'total': 0.0069, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.063, 'direct': 0.421, 'total': 0.48, 'unit': 'MJ'}, 'adp': {'embodied': 3.9e-07, 'direct': 1.81e-09, 'total': 3.9e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0373, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 3.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 7e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 1.2e-05, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: 134.280 kJ difference from expectation: -0.049 kJ
-
-CPU benchmark
-EP
-estimated impacts: {'gwp': {'embodied': 0.0016, 'direct': 0.000367, 'total': 0.0019, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.02, 'direct': 0.0807, 'total': 0.1, 'unit': 'MJ'}, 'adp': {'embodied': 1.2e-07, 'direct': 3.47e-10, 'total': 1.2e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.00715, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 9.7e-07, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 2e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 3.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: 25.740 kJ difference from expectation: 0.000 kJ
-LU
-estimated impacts: {'gwp': {'embodied': 0.00095, 'direct': 0.00022, 'total': 0.0012, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.012, 'direct': 0.0484, 'total': 0.06, 'unit': 'MJ'}, 'adp': {'embodied': 7.5e-08, 'direct': 2.08e-10, 'total': 7.5e-08, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.00429, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 5.8e-07, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 1.2e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 2.4e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: 15.444 kJ difference from expectation: 0.000 kJ
-MG
-estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: 64.440 kJ difference from expectation: 0.090 kJ
-
-Running the experiments with the "correct" setup
-GPU benchmark
-EP
-estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: 64.440 kJ difference from expectation: -111.734 kJ
-LU
-estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: 64.440 kJ difference from expectation: -317.203 kJ
-MG
-estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: 64.440 kJ difference from expectation: -69.889 kJ
-
-CPU benchmark
-EP
-estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: 64.440 kJ difference from expectation: 38.700 kJ
-LU
-estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: 64.440 kJ difference from expectation: 48.996 kJ
-MG
-estimated impacts: {'gwp': {'embodied': 0.0039, 'direct': 0.000916, 'total': 0.0049, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 0.05, 'direct': 0.202, 'total': 0.25, 'unit': 'MJ'}, 'adp': {'embodied': 3.1e-07, 'direct': 8.69e-10, 'total': 3.1e-07, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 0.0179, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 2.4e-06, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 4.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 9.9e-06, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: 64.440 kJ difference from expectation: 0.090 kJ
-#+end_example
-
-we obtain the following results :
-When trying to obtain the exact same results (same hardware setup as used for
-obtaining values with Green Algorithms)
-for the GPU benchmark
-| Benchmark | Value (kJ) | Difference (kJ) |
-| EP        |    176.040 |          -0.134 |
-| LU        |    381.600 |          -0.043 |
-| MG        |    134.280 |          -0.049 |
-for the CPU benchmarks
-| Benchmark | Value (kJ) | Difference (kJ) |
-| EP        |     25.740 |           0.000 |
-| LU        |     15.444 |           0.000 |
-| MG        |     64.440 |           0.090 |
-
-
-When using the hardware setup really used:
-for the GPU benchmark
-| Benchmark | Value (kJ) | Difference (kJ) |
-| EP        |     31.320 |        -144.854 |
-| LU        |     93.960 |        -287.683 |
-| MG        |     72.360 |         -61.969 |
-for the CPU benchmarks
-| Benchmark | Value (kJ) | Difference (kJ) |
-| EP        |     23.040 |          -2.700 |
-| LU        |     13.824 |          -1.620 |
-| MG        |     57.600 |          -6.750 |
-
-We can see that we are able to obtain results that are exactly the
-same as the expected ones up to rounding errors (difference 3 orders of magnitude
-lesser than the value). We can also see that even though the input
-value to Green Algorithms does not exactly correspond to the hardware
-setup used, we can also see that the difference to the expected
-results isn't high for CPUs (10 times less than the expected value)
-and is however pretty significant for the GPU benchmarks.
-These results demonstrate the importance of inputing the right
-hardware.
-
-* results from [Cattan2022benchmarking]
 
 We try to replicate the following results:
 
 Coûts  ́ecologiques et  ́energétiques passés à l’échelle
-Steps Inférences sur 1 journée (27 Millions d’appels)
+Steps Inférences sur 1 semaine (27 Millions d’appels)
 | Tasks                        |    MEDIA |        |        |  ATIS-FR |        |       |
 | Models                       |     Time | Energy |    CO2 |     Time | Energy |   CO2 |
 |                              | (Heures) |  (MWh) |   (Kg) | (Heures) |  (MWh) |  (Kg) |
@@ -958,183 +887,116 @@ Steps Inférences sur 1 journée (27 Millions d’appels)
 | distill-mBERTbase            |    15.06 | 152.08 | 110.11 |     2.35 |  23.25 | 16.79 |
 | small-mBERTbase-fr           |    16.45 | 166.24 | 120.35 |     2.46 |  24.56 | 17.79 |
 
+these results were obtained by scaling up the results obtained in
+\cite{Cattan2022benchmarking} for one inference to account for the
+weekly number of requests the search engine of Qwant receives.
+As always, we will need to first find the hardware configuration used,
+then we will check the coherency of the expected results and run our experiments.
+
 ** Hardware configuration
 
-We where told that the hardware used was an NVIDIA DGX equiped with 8
+We where told that the hardware used was an NVIDIA DGX equipped with 8
 NVIDIA Tesla V100 SMX2 16GB. I was not able to find such a
 configuration on NVIDIA's Website but since the Tesla V100 SMX2 32GB
-GPU present in an NVIDIA DGX-1 server have the same exact TDP, we will
+GPU present in an NVIDIA DGX-1 server have the same exact \gls{TDP}, we will
 suppose that this is the hardware used.
  
 ** running experiments
 
-   #+begin_src python :results output :exports both :session
+We can run the experiments and compare the results with the expected
+results: 
 
+#+begin_src python :results output :exports none :session
 with open("boaviztapi/data/ml_setups/Nvidia_DGX-1.json", 'r') as m:
     dgx_1_model = json.load(m)
-   
-dgx_1_model['usage']['minute_use_time'] = 0
-dgx_1_model['usage']['usage_location'] = "USA"
 
 def estimate(model, task, time):
    print(model + ": " + task)
    dgx_1_model["usage"][ "hours_use_time"] = time
    output = run_experiment(dgx_1_model, model + '_' + task,  directory='Cattan2022benchmarking', silent=True)
-   print_gwp_and_energy(output)
+   energy, gwp = print_gwp_and_energy(output)
+   return energy, gwp
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src python :results value raw :exports results :session
+
+table = pd.read_csv('expected/cattan_benchmarking.csv', sep=';', header=[0,1,2])
+
+rename_multi_index(table, ('Tasks', 'Models', 'Unnamed: 0_level_2'), ('Tasks', 'Models', ''))
+
+def set(model, task, col, val):
+    table.loc[table[('Tasks', 'Models', '')] == model, (task,col)] = val
+
+dgx_1_model['usage']['minute_use_time'] = 0
+dgx_1_model['usage']['usage_location'] = "USA"
+
+def estimate_and_set(model, task, time):
+   energy, gwp = estimate(model,task,time)
+   set(model, task, 'Estimated Energy', energy/1000)
+   set(model, task, 'Estimated CO2', gwp)
 
 print('MEDIA')
-estimate('FlauBERTbase', 'MEDIA', 20.19)
-estimate('CamemBERTlarge, CCNet 135 Gb', 'MEDIA', 50.63)
-estimate('CamemBERTbase, OSCAR 138 Gb', 'MEDIA',  20.23)
-estimate('CamemBERTbase, CCNet 135 Gb', 'MEDIA', 15.57)
-estimate('CamemBERTbase, OSCAR 4 Gb', 'MEDIA', 15.89)
-estimate('CamemBERTbase, CCNet 4 Gb', 'MEDIA', 15.64)
-estimate('CamemBERTbase, Wiki 4 Gb', 'MEDIA', 15.38)
-estimate('FrALBERTbase, Wiki 4 Gb', 'MEDIA', 9.11)
-estimate('XLM-Rbase', 'MEDIA', 17.20)
-estimate('XLM-Rlarge', 'MEDIA', 55.68)
-estimate('mBERTbase', 'MEDIA', 17.95)
-estimate('distill-mBERTbase', 'MEDIA', 15.06)
-estimate('small-mBERTbase-fr', 'MEDIA', 16.45)
+estimate_and_set('FlauBERTbase', 'MEDIA', 20.19)
+estimate_and_set('CamemBERTlarge, CCNet 135 Gb', 'MEDIA', 50.63)
+estimate_and_set('CamemBERTbase, OSCAR 138 Gb', 'MEDIA',  20.23)
+estimate_and_set('CamemBERTbase, CCNet 135 Gb', 'MEDIA', 15.57)
+estimate_and_set('CamemBERTbase, OSCAR 4 Gb', 'MEDIA', 15.89)
+estimate_and_set('CamemBERTbase, CCNet 4 Gb', 'MEDIA', 15.64)
+estimate_and_set('CamemBERTbase, Wiki 4 Gb', 'MEDIA', 15.38)
+estimate_and_set('FrALBERTbase, Wiki 4 Gb', 'MEDIA', 9.11)
+estimate_and_set('XLM-Rbase', 'MEDIA', 17.20)
+estimate_and_set('XLM-Rlarge', 'MEDIA', 55.68)
+estimate_and_set('mBERTbase', 'MEDIA', 17.95)
+estimate_and_set('distill-mBERTbase', 'MEDIA', 15.06)
+estimate_and_set('small-mBERTbase-fr', 'MEDIA', 16.45)
 print('ATIS-FR')
-estimate('FlauBERTbase', 'MEDIA', 3.08)
-estimate('CamemBERTlarge, CCNet 135 Gb', 'MEDIA', 7.36)
-estimate('CamemBERTbase, OSCAR 138 Gb', 'MEDIA',  3.27)
-estimate('CamemBERTbase, CCNet 135 Gb', 'MEDIA', 2.55)
-estimate('CamemBERTbase, OSCAR 4 Gb', 'MEDIA', 2.52)
-estimate('CamemBERTbase, CCNet 4 Gb', 'MEDIA', 2.59)
-estimate('CamemBERTbase, Wiki 4 Gb', 'MEDIA', 2.50)
-estimate('FrALBERTbase, Wiki 4 Gb', 'MEDIA', 1.39)
-estimate('XLM-Rbase', 'MEDIA', 2.40)
-estimate('XLM-Rlarge', 'MEDIA', 8.02)
-estimate('mBERTbase', 'MEDIA', 2.48)
-estimate('distill-mBERTbase', 'MEDIA', 2.35)
-estimate('small-mBERTbase-fr', 'MEDIA', 2.46)
+estimate_and_set('FlauBERTbase', 'ATIS-FR', 3.08)
+estimate_and_set('CamemBERTlarge, CCNet 135 Gb','ATIS-FR', 7.36)
+estimate_and_set('CamemBERTbase, OSCAR 138 Gb', 'ATIS-FR',  3.27)
+estimate_and_set('CamemBERTbase, CCNet 135 Gb', 'ATIS-FR', 2.55)
+estimate_and_set('CamemBERTbase, OSCAR 4 Gb', 'ATIS-FR', 2.52)
+estimate_and_set('CamemBERTbase, CCNet 4 Gb','ATIS-FR', 2.59)
+estimate_and_set('CamemBERTbase, Wiki 4 Gb','ATIS-FR', 2.50)
+estimate_and_set('FrALBERTbase, Wiki 4 Gb', 'ATIS-FR', 1.39)
+estimate_and_set('XLM-Rbase', 'ATIS-FR', 2.40)
+estimate_and_set('XLM-Rlarge', 'ATIS-FR', 8.02)
+estimate_and_set('mBERTbase', 'ATIS-FR', 2.48)
+estimate_and_set('distill-mBERTbase','ATIS-FR', 2.35)
+estimate_and_set('small-mBERTbase-fr','ATIS-FR', 2.46)
 
+
+to_org_table(multi_index_to_multiline_header(table))
    #+end_src
 
    #+RESULTS:
-   #+begin_example
-   MEDIA
-   FlauBERTbase: MEDIA
-   energy consumption: {'value': 44.2, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.7, 'direct': 2.27, 'total': 4.0, 'unit': 'kgCO2eq'}
-   CamemBERTlarge, CCNet 135 Gb: MEDIA
-   energy consumption: {'value': 111.0, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 4.2, 'direct': 5.69, 'total': 9.9, 'unit': 'kgCO2eq'}
-   CamemBERTbase, OSCAR 138 Gb: MEDIA
-   energy consumption: {'value': 44.3, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.7, 'direct': 2.27, 'total': 4.0, 'unit': 'kgCO2eq'}
-   CamemBERTbase, CCNet 135 Gb: MEDIA
-   energy consumption: {'value': 34.1, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.3, 'direct': 1.75, 'total': 3.0, 'unit': 'kgCO2eq'}
-   CamemBERTbase, OSCAR 4 Gb: MEDIA
-   energy consumption: {'value': 34.8, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.3, 'direct': 1.79, 'total': 3.1, 'unit': 'kgCO2eq'}
-   CamemBERTbase, CCNet 4 Gb: MEDIA
-   energy consumption: {'value': 34.3, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.3, 'direct': 1.76, 'total': 3.1, 'unit': 'kgCO2eq'}
-   CamemBERTbase, Wiki 4 Gb: MEDIA
-   energy consumption: {'value': 33.7, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.3, 'direct': 1.73, 'total': 3.0, 'unit': 'kgCO2eq'}
-   FrALBERTbase, Wiki 4 Gb: MEDIA
-   energy consumption: {'value': 20.0, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.76, 'direct': 1.02, 'total': 1.8, 'unit': 'kgCO2eq'}
-   XLM-Rbase: MEDIA
-   energy consumption: {'value': 37.7, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.4, 'direct': 1.93, 'total': 3.4, 'unit': 'kgCO2eq'}
-   XLM-Rlarge: MEDIA
-   energy consumption: {'value': 122.0, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 4.6, 'direct': 6.26, 'total': 11.0, 'unit': 'kgCO2eq'}
-   mBERTbase: MEDIA
-   energy consumption: {'value': 39.3, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.5, 'direct': 2.02, 'total': 3.5, 'unit': 'kgCO2eq'}
-   distill-mBERTbase: MEDIA
-   energy consumption: {'value': 33.0, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.3, 'direct': 1.69, 'total': 2.9, 'unit': 'kgCO2eq'}
-   small-mBERTbase-fr: MEDIA
-   energy consumption: {'value': 36.0, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 1.4, 'direct': 1.85, 'total': 3.2, 'unit': 'kgCO2eq'}
-   ATIS-FR
-   FlauBERTbase: MEDIA
-   energy consumption: {'value': 6.75, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.26, 'direct': 0.346, 'total': 0.6, 'unit': 'kgCO2eq'}
-   CamemBERTlarge, CCNet 135 Gb: MEDIA
-   energy consumption: {'value': 16.1, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.61, 'direct': 0.827, 'total': 1.4, 'unit': 'kgCO2eq'}
-   CamemBERTbase, OSCAR 138 Gb: MEDIA
-   energy consumption: {'value': 7.16, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.27, 'direct': 0.367, 'total': 0.64, 'unit': 'kgCO2eq'}
-   CamemBERTbase, CCNet 135 Gb: MEDIA
-   energy consumption: {'value': 5.59, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.21, 'direct': 0.286, 'total': 0.5, 'unit': 'kgCO2eq'}
-   CamemBERTbase, OSCAR 4 Gb: MEDIA
-   energy consumption: {'value': 5.52, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.21, 'direct': 0.283, 'total': 0.49, 'unit': 'kgCO2eq'}
-   CamemBERTbase, CCNet 4 Gb: MEDIA
-   energy consumption: {'value': 5.67, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.22, 'direct': 0.291, 'total': 0.51, 'unit': 'kgCO2eq'}
-   CamemBERTbase, Wiki 4 Gb: MEDIA
-   energy consumption: {'value': 5.48, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.21, 'direct': 0.281, 'total': 0.49, 'unit': 'kgCO2eq'}
-   FrALBERTbase, Wiki 4 Gb: MEDIA
-   energy consumption: {'value': 3.05, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.156, 'total': 0.27, 'unit': 'kgCO2eq'}
-   XLM-Rbase: MEDIA
-   energy consumption: {'value': 5.26, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.27, 'total': 0.47, 'unit': 'kgCO2eq'}
-   XLM-Rlarge: MEDIA
-   energy consumption: {'value': 17.6, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.67, 'direct': 0.901, 'total': 1.6, 'unit': 'kgCO2eq'}
-   mBERTbase: MEDIA
-   energy consumption: {'value': 5.43, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.21, 'direct': 0.279, 'total': 0.49, 'unit': 'kgCO2eq'}
-   distill-mBERTbase: MEDIA
-   energy consumption: {'value': 5.15, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.2, 'direct': 0.264, 'total': 0.46, 'unit': 'kgCO2eq'}
-   small-mBERTbase-fr: MEDIA
-   energy consumption: {'value': 5.39, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.21, 'direct': 0.276, 'total': 0.48, 'unit': 'kgCO2eq'}
-   #+end_example
+   | Tasks                        |    MEDIA |           MEDIA |            MEDIA |        MEDIA |         MEDIA |  ATIS-FR |         ATIS-FR |          ATIS-FR |      ATIS-FR |       ATIS-FR |
+   | Models                       |     Time | Expected Energy | Estimated Energy | Expected CO2 | Estimated CO2 |     Time | Expected Energy | Estimated Energy | Expected CO2 | Estimated CO2 |
+   |                              | (Heures) |           (MWh) |            (MWh) |         (Kg) |          (Kg) | (Heures) |           (MWh) |            (MWh) |         (Kg) |          (Kg) |
+   |------------------------------+----------+-----------------+------------------+--------------+---------------+----------+-----------------+------------------+--------------+---------------|
+   | FlauBERTbase                 |    20.19 |          204.24 |           0.0442 |       147.84 |          2.27 |     3.08 |           30.88 |          0.00675 |        22.33 |         0.346 |
+   | CamemBERTlarge, CCNet 135 Gb |    50.63 |          512.67 |            0.111 |       371.14 |          5.69 |     7.36 |           74.23 |           0.0161 |        53.75 |         0.827 |
+   | CamemBERTbase, OSCAR 138 Gb  |    20.23 |          204.67 |           0.0443 |       148.15 |          2.27 |     3.27 |           32.57 |          0.00716 |        23.56 |         0.367 |
+   | CamemBERTbase, CCNet 135 Gb  |    15.57 |          157.39 |           0.0341 |       113.96 |          1.75 |     2.55 |           24.79 |          0.00559 |        17.94 |         0.286 |
+   | CamemBERTbase, OSCAR 4 Gb    |    15.89 |           160.7 |           0.0348 |       116.35 |          1.79 |     2.52 |           25.18 |          0.00552 |        18.25 |         0.283 |
+   | CamemBERTbase, CCNet 4 Gb    |    15.64 |          158.08 |           0.0343 |       114.42 |          1.76 |     2.59 |           25.49 |          0.00567 |        18.48 |         0.291 |
+   | CamemBERTbase, Wiki 4 Gb     |    15.38 |          155.46 |           0.0337 |       112.57 |          1.73 |      2.5 |           24.95 |          0.00548 |         18.1 |         0.281 |
+   | FrALBERTbase, Wiki 4 Gb      |     9.11 |           92.02 |             0.02 |        66.61 |          1.02 |     1.39 |           13.71 |          0.00305 |         9.93 |         0.156 |
+   | XLM-Rbase                    |     17.2 |          173.94 |           0.0377 |        125.9 |          1.93 |      2.4 |           25.72 |          0.00526 |        18.63 |          0.27 |
+   | XLM-Rlarge                   |    55.68 |          563.95 |            0.122 |       408.25 |          6.26 |     8.02 |           76.08 |           0.0176 |         58.6 |         0.901 |
+   | mBERTbase                    |    17.95 |          181.41 |           0.0393 |       131.36 |          2.02 |     2.48 |           24.72 |          0.00543 |        17.94 |         0.279 |
+   | distill-mBERTbase            |    15.06 |          152.08 |            0.033 |       110.11 |          1.69 |     2.35 |           23.25 |          0.00515 |        16.79 |         0.264 |
+   | small-mBERTbase-fr           |    16.45 |          166.24 |            0.036 |       120.35 |          1.85 |     2.46 |           24.56 |          0.00539 |        17.79 |         0.276 |
 
-
-One might want to test if it was only a unit impact.
-   #+begin_src python :results output :exports both :session
-estimate('test', 'test', 72/3600)
-   #+end_src
-
-   #+RESULTS:
-   : test: test
-   : energy consumption: {'value': 0.0438, 'unit': 'kWh'}
-   : dynamic impacts gwp: {'embodied': 0.0017, 'direct': 0.00225, 'total': 0.0039, 'unit': 'kgCO2eq'}
-These results are not helping us in any way.
-One option could be a transcription from pounds to kgs without
-conversion ?
-
-we obtain the following results:
-
-| Tasks                        |    MEDIA |          |           |          |           |  ATIS-FR |          |           |          |           |
-| Models                       |     Time |   Energy | Energy    |      CO2 | CO2       |     Time |   Energy | Energy    |      CO2 | CO2       |
-|                              | (Heures) |    (MWh) | (MWh)     |     (Kg) | (Kg)      | (Heures) |    (MWh) | (MWh)     |     (Kg) | (Kg)      |
-|                              | (Heures) | Expected | Estimated | Expected | Estimated | (Heures) | Expected | Estimated | Expected | Estimated |
-|------------------------------+----------+----------+-----------+----------+-----------+----------+----------+-----------+----------+-----------|
-| FlauBERTbase                 |    20.19 |   204.24 |           |   147.84 |           |     3.08 |    30.88 |           |    22.33 |           |
-| CamemBERTlarge, CCNet 135 Gb |    50.63 |   512.67 |           |   371.14 |           |     7.36 |    74.23 |           |    53.75 |           |
-| CamemBERTbase, OSCAR 138 Gb  |    20.23 |   204.67 |           |   148.15 |           |     3.27 |    32.57 |           |    23.56 |           |
-| CamemBERTbase, CCNet 135 Gb  |    15.57 |   157.39 |           |   113.96 |           |     2.55 |    24.79 |           |    17.94 |           |
-| CamemBERTbase, OSCAR 4 Gb    |    15.89 |   160.70 |           |   116.35 |           |     2.52 |    25.18 |           |    18.25 |           |
-| CamemBERTbase, CCNet 4 Gb    |    15.64 |   158.08 |           |   114.42 |           |     2.59 |    25.49 |           |    18.48 |           |
-| CamemBERTbase, Wiki 4 Gb     |    15.38 |   155.46 |           |   112.57 |           |     2.50 |    24.95 |           |    18.10 |           |
-| FrALBERTbase, Wiki 4 Gb      |     9.11 |    92.02 |           |    66.61 |           |     1.39 |    13.71 |           |     9.93 |           |
-| XLM-Rbase                    |    17.20 |   173.94 |           |   125.90 |           |     2.40 |    25.72 |           |    18.63 |           |
-| XLM-Rlarge                   |    55.68 |   563.95 |           |   408.25 |           |     8.02 |    76.08 |           |    58.60 |           |
-| mBERTbase                    |    17.95 |   181.41 |           |   131.36 |           |     2.48 |    24.72 |           |    17.94 |           |
-| distill-mBERTbase            |    15.06 |   152.08 |           |   110.11 |           |     2.35 |    23.25 |           |    16.79 |           |
-| small-mBERTbase-fr           |    16.45 |   166.24 |           |   120.35 |           |     2.46 |    24.56 |           |    17.79 |           |
+We can see that we obtain results as low as 4 orders of magnitude
+lower than the expected results. This massive difference cannot be
+easily explained and is a really surprising result.
 
 ** Explaining the massive differences between our estimates and the expected results
 
-#+begin_src python :results output :exports both
+#+begin_src python :results output :exports none
 print(3.500 * 8)
 print(8*250 + 512*.3725 + 2*135)
 print(8*250 + 512*.3725)
@@ -1162,7 +1024,7 @@ consumption of 28kWh. This is extremely far from the 76MWh
 presented. There is therefore a problem in the expected data or (more
 probably) in the hardware configuration used. 
 
-#+begin_src python :results output :exports both
+#+begin_src python :results output :exports none
 # dividing emissions by energy consumption to get Carbon Intensity
 print(204.24E+3 / 147.84E+3)
 print(512.67/  371.14)
@@ -1178,17 +1040,24 @@ print(74.23/53.75)
 : 1.3828929690998657
 : 1.3810232558139535
 
-Furthermore we can see that conversion froom energy consumption to
+Furthermore we can see that conversion from energy consumption to
 carbon emissions make us remark that the carbon intensity seemingly
 used is approximately 1.38 gCO_2 e/kWh. This is extremely low as the
-Carbon Intensity for France is estimated between 50 and 200 gCO_2 e/kWh
+Carbon Intensity for France is estimated between 50 and 200 gCO_2
+e/kWh.
 
-** table from RAPL paper
+In order to get further insight on what could cause these
+inconsistencies we will try and reproduce results from
+\cite{Cattan2022usability} which uses the same configuration. If
+results from this paper are consistent with our estimates, this would
+tend to confirm that there is a problem in the data presented in
+\cite{Cattan2022benchmarking} and not in our estimates
+
+** table from \cite{Cattan2022usability}
 
 It is said that only one V100 GPU is used for training the different
 models. (we will suppose that it was done on one DGX-1 server)
    
-*** Carbon intensity used
    #+begin_src python :results output :exports both
 import numpy as np
 energy = [1.08,3.10,.57,1.14,3.30,1.07,1.09,1.06]
@@ -1204,7 +1073,7 @@ kWh.
 
 *** results
 
-we can see on [[https://github.com/Breakend/experiment-impact-tracker][Experiment-Impact-Tracker's repository]] that they by default use a PUE
+we can see on [[https://github.com/Breakend/experiment-impact-tracker][Experiment-Impact-Tracker's repository]] that they by default use a \gls{PUE}
 of 1.58, in order to replicate their results. We will choose to use
 this value of 1.58 as dynamic ratio.
 
@@ -1213,7 +1082,20 @@ capacity. we can also try a scenario where one core of one GPU is used
 during training. This would lead to including a cpu usage of 1/20
 (since the CPU has 20 cores).
 
-   #+begin_src python :results output :exports both :session
+Table \ref{tab:cattan_usability} presents the results of these
+experiments :
+
+#+begin_src python :results output :exports none :session
+table = pd.read_csv('expected/cattan_usability.csv', sep=',', header=[0,1,2])
+
+rename_multi_index(table, ('model', 'Unnamed: 0_level_1', 'Unnamed: 0_level_2'), ('model', '', ''))
+rename_multi_index(table, ('estimate', 'Unnamed: 1_level_1', 'Unnamed: 1_level_2'), ('estimate', '',''))
+rename_multi_index(table, ('time', 'Unnamed: 2_level_1','(s)'),('time','','(s)'))
+
+
+def set(model, estimate, col, val):
+    table.loc[(table[('model','','')] == model) & (table[('estimate','','')] == estimate), col] = val
+
 with open("boaviztapi/data/ml_setups/Nvidia_DGX-1.json", 'r') as m:
     dgx_1_model = json.load(m)
 
@@ -1224,10 +1106,18 @@ dgx_1_model['server']['configuration']['cpu']['units'] = 1
 
 def FQuAD_train_estimate(model, time_seconds):
     dgx_1_model["cpu_usage"] = 0
-    estimate(model, 'FQuAD_train_lower', time_seconds/3600)
+    energy, gwp = estimate(model, 'FQuAD_train_lower', time_seconds/3600)
+    set(model, 'lower', ('estimated','energy','(kWh)'), energy)
+    set(model, 'lower', ('estimated','carbon','(kgCO2e)'), gwp)
     dgx_1_model["cpu_usage"] = 1/20
-    estimate('FraLBERT_base', 'FQuAD_train_upper', time_seconds/3600)
-   
+    energy, gwp = estimate(model, 'FQuAD_train_upper', time_seconds/3600)
+    set(model, 'upper', ('estimated','energy','(kWh)'), energy)
+    set(model, 'upper', ('estimated','carbon','(kgCO2e)'), gwp)
+#+end_src
+
+#+RESULTS:
+
+   #+begin_src python :results value raw :exports results :session
 FQuAD_train_estimate('CamemBERT_base', 7207)
 FQuAD_train_estimate('CamemBERT_large', 19445)
 FQuAD_train_estimate('FraLBERT_base', 3816)
@@ -1236,100 +1126,138 @@ FQuAD_train_estimate('XLM-R_large', 21137)
 FQuAD_train_estimate('mBERT_base', 7333)
 FQuAD_train_estimate('small-mBERT_base', 7190)
 FQuAD_train_estimate('distil-mBERT_base', 6466)
+
+to_org_table(multi_index_to_multiline_header(table))
    #+end_src
 
    #+RESULTS:
-   #+begin_example
-   CamemBERT_base: FQuAD_train_lower
-   energy consumption: {'value': 1.41, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.415, 'total': 0.54, 'unit': 'kgCO2eq'}
-   FraLBERT_base: FQuAD_train_upper
-   energy consumption: {'value': 1.43, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.421, 'total': 0.54, 'unit': 'kgCO2eq'}
-   CamemBERT_large: FQuAD_train_lower
-   energy consumption: {'value': 3.77, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.33, 'direct': 1.11, 'total': 1.4, 'unit': 'kgCO2eq'}
-   FraLBERT_base: FQuAD_train_upper
-   energy consumption: {'value': 3.83, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.33, 'direct': 1.13, 'total': 1.5, 'unit': 'kgCO2eq'}
-   FraLBERT_base: FQuAD_train_lower
-   energy consumption: {'value': 0.75, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.065, 'direct': 0.221, 'total': 0.29, 'unit': 'kgCO2eq'}
-   FraLBERT_base: FQuAD_train_upper
-   energy consumption: {'value': 0.761, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.065, 'direct': 0.225, 'total': 0.29, 'unit': 'kgCO2eq'}
-   XLM-R_base: FQuAD_train_lower
-   energy consumption: {'value': 1.5, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.13, 'direct': 0.441, 'total': 0.57, 'unit': 'kgCO2eq'}
-   FraLBERT_base: FQuAD_train_upper
-   energy consumption: {'value': 1.52, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.13, 'direct': 0.448, 'total': 0.58, 'unit': 'kgCO2eq'}
-   XLM-R_large: FQuAD_train_lower
-   energy consumption: {'value': 4.1, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.36, 'direct': 1.21, 'total': 1.6, 'unit': 'kgCO2eq'}
-   FraLBERT_base: FQuAD_train_upper
-   energy consumption: {'value': 4.16, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.36, 'direct': 1.23, 'total': 1.6, 'unit': 'kgCO2eq'}
-   mBERT_base: FQuAD_train_lower
-   energy consumption: {'value': 1.43, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.422, 'total': 0.55, 'unit': 'kgCO2eq'}
-   FraLBERT_base: FQuAD_train_upper
-   energy consumption: {'value': 1.45, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.428, 'total': 0.55, 'unit': 'kgCO2eq'}
-   small-mBERT_base: FQuAD_train_lower
-   energy consumption: {'value': 1.4, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.414, 'total': 0.54, 'unit': 'kgCO2eq'}
-   FraLBERT_base: FQuAD_train_upper
-   energy consumption: {'value': 1.42, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.12, 'direct': 0.42, 'total': 0.54, 'unit': 'kgCO2eq'}
-   distil-mBERT_base: FQuAD_train_lower
-   energy consumption: {'value': 1.26, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.11, 'direct': 0.372, 'total': 0.48, 'unit': 'kgCO2eq'}
-   FraLBERT_base: FQuAD_train_upper
-   energy consumption: {'value': 1.28, 'unit': 'kWh'}
-   dynamic impacts gwp: {'embodied': 0.11, 'direct': 0.378, 'total': 0.49, 'unit': 'kgCO2eq'}
-   #+end_example
+   | model            | estimate |  time | expected | estimated | expected | estimated |
+   |                  |          |       |   energy |    energy |   carbon |    carbon |
+   |                  |          |   (s) |    (kWh) |     (kWh) | (kgCO2e) |  (kgCO2e) |
+   |------------------+----------+-------+----------+-----------+----------+-----------|
+   | CamemBERT_base    | lower    |  7207 |     1.08 |      1.41 |    0.317 |     0.415 |
+   | CamemBERT_base    | upper    |  7207 |     1.08 |      1.43 |    0.317 |     0.421 |
+   | CamemBERT_large   | lower    | 19445 |      3.1 |      3.77 |    0.914 |      1.11 |
+   | CamemBERT_large   | upper    | 19445 |      3.1 |      3.83 |    0.914 |      1.13 |
+   | FrALBERT_base     | lower    |  3816 |     0.57 |      0.75 |    0.167 |     0.221 |
+   | FrALBERT_base     | upper    |  3816 |     0.57 |     0.761 |    0.167 |     0.225 |
+   | XLM-R_base        | lower    |  7676 |     1.14 |       1.5 |    0.337 |     0.441 |
+   | XLM-R_base        | upper    |  7676 |     1.14 |      1.52 |    0.337 |     0.448 |
+   | XLM-R_large       | lower    | 21137 |      3.3 |       4.1 |    0.973 |      1.21 |
+   | XLM-R_large       | upper    | 21137 |      3.3 |      4.16 |    0.973 |      1.23 |
+   | mBERT_base        | lower    |  7333 |     1.07 |      1.43 |    0.317 |     0.422 |
+   | mBERT_base        | upper    |  7333 |     1.07 |      1.45 |    0.317 |     0.428 |
+   | samll-mBERT_base  | lower    |  7190 |     1.09 |       1.4 |    0.321 |     0.414 |
+   | samll-mBERT_base  | upper    |  7190 |     1.09 |      1.42 |    0.321 |      0.42 |
+   | distil-mBERT_base | lower    |  6466 |     1.06 |      1.26 |    0.314 |     0.372 |
+   | distil-mBERT_base | upper    |  6466 |     1.06 |      1.28 |    0.314 |     0.378 |
 
-we obtain the following results:
-
-| model            | estimate |  time | expected energy | estimated energy | expected carbon | estimated carbon |
-|                  |          |   (s) |           (kWh) |            (kWh) |       (kgCO_2 e) |        (kgCO_2 e) |
-|------------------+----------+-------+-----------------+------------------+-----------------+------------------|
-| CamemBERT_base    | lower    |  7207 |            1.08 |             1.41 |            .317 |             .415 |
-| CamemBERT_base    | upper    |  7207 |            1.08 |             1.43 |            .317 |             .421 |
-| CamemBERT_large   | lower    | 19445 |            3.10 |             3.77 |            .914 |             1.11 |
-| CamemBERT_large   | upper    | 19445 |            3.10 |             3.83 |            .914 |             1.13 |
-| FrALBERT_base     | lower    |  3816 |             .57 |              .75 |            .167 |             .221 |
-| FrALBERT_base     | upper    |  3816 |             .57 |             .761 |            .167 |             .225 |
-|------------------+----------+-------+-----------------+------------------+-----------------+------------------|
-| XLM-R_base        | lower    |  7676 |            1.14 |              1.5 |            .337 |             .441 |
-| XLM-R_base        | upper    |  7676 |            1.14 |             1.52 |            .337 |             .448 |
-| XLM-R_large       | lower    | 21137 |             3.3 |              4.1 |            .973 |             1.21 |
-| XLM-R_large       | upper    | 21137 |             3.3 |             4.16 |            .973 |             1.23 |
-| mBERT_base        | lower    |  7333 |            1.07 |             1.43 |            .317 |             .422 |
-| mBERT_base        | upper    |  7333 |            1.07 |             1.45 |            .317 |             .428 |
-| samll-mBERT_base  | lower    |  7190 |            1.09 |              1.4 |            .321 |             .414 |
-| samll-mBERT_base  | upper    |  7190 |            1.09 |             1.42 |            .321 |              .42 |
-| distil-mBERT_base | lower    |  6466 |            1.06 |             1.26 |            .314 |             .372 |
-| distil-mBERT_base | upper    |  6466 |            1.06 |             1.28 |            .314 |             .378 |
-
-We can see that we obtain results slightly higher that those presented
+We can see that for upper and lower estimates we obtain results slightly higher that those presented
 in the paper but in the same order of magnitude. This is expected
 since estimation tools tend to provide higher (and closer to reality) estimates than
-measurement tools. However, we can also see that the estimation tool ([Jay2023experimental])
-does not capture some subtulties. For instance small-mBERT_base
-training is quicker than mBERT_base one. Howerver this does not
+measurement tools. However, we can also see that the estimation tool (\cite{Jay2023experimental})
+does not capture some subtleties. For instance small-mBERT_base
+training is quicker than mBERT_base one. However this does not
 translate to smaller energy consumption most probably because one
-model training uses more ressources than the other one. Without fine
+model training uses more resources than the other one. Without fine
 knowledge of the processing units usage, we cannot provide very
 precise estimations and track small changes such as this one.
 
 
 All of these results tend to confirm that there are problems with the
-data available in [Cattan2022benchmarking] but that the data from
-[Cattan2022usability] confirms us the hardware configuration used.
+data available in \cite{Cattan2022benchmarking} but that the data from
+\cite{Cattan2022usability} confirms us the hardware configuration used.
 
-* estimations from [Strubell2019energy] 
+** New experiment :
+
+After pointing out the problems in the data to the authors, they ran a
+new experiment on the Segur machine. The following results
+were obtained using Experiment-Impact-Tracker :
+
+| cpu_hours                |   1.0428555555555554 |
+| gpu_hours                |   0.9933892874755572 |
+| estimated_carbon_impact_kg | 0.024094323442314113 |
+| total_power              |   0.4302695971583645 |
+| kw_hr_gpu                 |   0.2516560133562949 |
+| kw_hr_cpu                 |  0.02066651649077121 |
+| exp_len_hours             |  0.5388999266756905  |
+
+from these results, and knowing that the Segur machine is equipped with
+2 20 core CPUs with 125 GB RAM  and 2 GTX 1080 Ti,
+we can estimate that approximately 2 cores (1.04/.53) were used at
+full capacity during training, which equates to 1/20 usage. The two
+GPU also seem to have been used at full capacity.
+we can deduce the used Carbon Intensity by dividing the estimated
+carbon by the measured power
+
+#+begin_src python :results value :exports none
+return 0.024094323442314113 / 0.4302695971583645 * 1000
+#+end_src
+
+#+RESULTS:
+: 55.99820113119911
+
+this result of 56 gCO_2 e/kWh lead us to think that the Carbon
+Intensity of France was used. (which would be logical since the
+experiment was run in France)
+
+We also know that Experiment Impact Tracker uses a \gls{PUE} of 1.58, in
+order to try and reproduce these results, we will use a dynamic ratio
+of 1.58. We will also try with the base dynamic ratio and see the difference
+
+All of this allows us to run the following experiment to try and
+reproduce these results
+
+#+begin_src python :results value raw :exports results :session
+with open("boaviztapi/data/ml_setups/Segur.json", 'r') as m:
+    segur = json.load(m)
+
+segur['usage']['minute_use_time'] = 0
+segur['usage']['usage_location'] = "FRA"
+segur['usage']['gwp_factor'] = 0.024094323442314113 / 0.4302695971583645
+segur['cpu_usage'] = 1/20
+
+def estimate(model, task, time):
+   print(model + ": " + task)
+   segur["usage"]["hours_use_time"] = time
+   output = run_experiment(segur, model + '_' + task,  directory='Cattan2022benchmarking', silent=True)
+   return print_gwp_and_energy(output)
+
+energy_estimated, gwp_estimated = estimate('FrALBERTbase, Wiki 4 Gb trained on Segur', 'MEDIA', 0.5388999266756905)
+segur['usage']['dynamic_ratio'] = 1.58
+energy_match, gwp_match = estimate('FrALBERTbase_Wiki 4_Gb_trained_on_Segur_match', 'MEDIA', 0.5388999266756905)
+
+df = pd.DataFrame(columns=['','Expected','Estimated', 'Match'])
+df = df.append({'':'energy (kWh)','Expected':0.43,'Estimated':energy_estimated,'Match':energy_match}, ignore_index=True)
+df = df.append({'':'Carbon (kgCO2e)','Expected':0.0241,'Estimated':gwp_estimated,'Match':gwp_match}, ignore_index=True)
+to_org_table(df)
+#+end_src
+
+#+RESULTS:
+|                 | Expected | Estimated |  Match |
+|-----------------+----------+-----------+--------|
+| energy (kWh)    |     0.43 |     0.855 |  0.436 |
+| Carbon (kgCO2e) |   0.0241 |    0.0479 | 0.0244 |
+
+
+We can see that we obtain very close results (a little bit higher just
+as expected) when trying to get an
+exact match by using a dynamic ratio of 1.58 and estimates are
+approximately doubled when using the base dynamic ratio which stands
+around 3.
+
+
+# Estimate about the inference phase.
+
+#+begin_src python :results value :exports none
+return 0.02 * 40
+#+end_src
+
+#+RESULTS:
+: 0.8
+
+
+* estimations from \cite{Strubell2019energy} 
 
 ** Information about the hardware configuration
 
@@ -1349,21 +1277,21 @@ estimating the consumption and the total estimated consumption for
 training each model. We will therefore not give any value for
 the CPU and ram and run our estimates as is. We will see what results
 we obtain. We would like, not to obtain exact results since it wont be
-possible given the informations missing. Since they use measurement
-tools, we can think that using a modelisation using the TDP will give
+possible given the information missing. Since they use measurement
+tools, we can think that using a modeling using the \gls{TDP} will give
 an higher result but since we do not know the quantity of memory used
 and the CPU used, we are not sure that the results will be higher
 (even if we can hypothesize that the CPU average consumption is
 negligible compared to the GPU consumption.)
 
-One reassuring point is that CTX 1080 Ti, V100, P100 and Titan X GPUs have the same
-TDP so the consumption estimated should make sense.
+One reassuring point is that GTX 1080 Ti, V100, P100 and Titan X GPUs have the same
+\gls{TDP} so the consumption estimated should make sense.
 
-They use a PUE of 1.58 and a Carbon Intensity of 0.954 pounds CO_2
+They use a \gls{PUE} of 1.58 and a Carbon Intensity of 0.954 pounds CO_2
 e/kWh for American electricity production which is equivalent to
 432.72 g CO_2 e/kWh.
 
-#+begin_src python :results output :exports both :session
+#+begin_src python :results output :exports none :session
 def convert_pounds_kg(x):
     return  0.453592 * x
 
@@ -1376,9 +1304,7 @@ print(convert_pounds_kg(.954) * 1000)
 #+RESULTS:
 : 432.726768
 
-** Reproducing figures from table 3
-
-*** Checking the Coherency of the presented results
+** Checking the Coherency of the presented results
 
 Since there are no estimates given for models trained on TPUs, we will
 in the first time at least ignore these models.
@@ -1386,9 +1312,9 @@ in the first time at least ignore these models.
 Since table 3 presents the estimated consumption used, we can first
 check the coherency of the table by seeing if we can reproduce the
 same energy consumption by multiplying the power by the training time
-and the PUE
+and the \gls{PUE}
 
-#+begin_src python :results value :exports both
+#+begin_src python :results value :exports none
 return list(map(lambda x: 1.58/1000*x, (1415.78*12, 1515.43*84, 517.66*336, 12041.51*79, 1515.43*274120)))
 #+end_src
 
@@ -1398,7 +1324,7 @@ return list(map(lambda x: 1.58/1000*x, (1415.78*12, 1515.43*84, 517.66*336, 1204
 We can see that, up to rounding we obtain the same results.
 We can also check that we obtain the same carbon emissions.
 
-#+begin_src python :results value :exports both
+#+begin_src python :results value :exports none
 return list(map(lambda x: x*.954, [27,201,275,1507,656347])) 
 #+end_src
 
@@ -1407,15 +1333,17 @@ return list(map(lambda x: x*.954, [27,201,275,1507,656347]))
 
 Also the same up to rounding errors
 
-*** running our estimations
+** running our estimations
 
 For a first check, we will compare the estimated energy consumption of
-just the GPUs with the presented hardware consumptions. The TDP of a
+just the GPUs with the presented hardware consumption. The \gls{TDP} of a
 P100 GPU is 250W, also the same as the one of a GTX 1080 ti.
 
-#+begin_src python :results value :exports both
+
+#+begin_src python :results value :exports results
 return [
 ("model", "estimated", "measured"),
+None,
 ("Transformer_base", 250*8, 1415.78),
 ("Transformer_big",250*8, 1515.43),
 ('ELMo',250*3, 517.66),
@@ -1426,6 +1354,7 @@ return [
 
 #+RESULTS:
 | model           | estimated | measured |
+|-----------------+-----------+----------|
 | Transformer_base |      2000 |  1415.78 |
 | Transformer_big  |      2000 |  1515.43 |
 | ELMo            |       750 |   517.66 |
@@ -1435,10 +1364,38 @@ return [
 We can see that, as expected since the provided consumption result
 from using measurement tools, the estimated consumption is bigger
 (approximately + 1/3) than
-the measured consumption. Still, it remains in the same order of magnitude
+the measured consumption. Still, it remains in the same order of
+magnitude.
 
-#+begin_src python :results output :exports both :session
-import copy
+#+begin_src python :results value :exports none :session
+[
+('model', 'estimated pounds', 'estimated kg'),
+None,
+('Transformer_base',26,round(convert_pounds_kg(26),2)),
+('Transformer_big',192,round(convert_pounds_kg(192),2)),
+('BERT_base',1438,round(convert_pounds_kg(1438),2)),
+('NAS',626155,round(convert_pounds_kg(626155),2)),
+('ELMo',262,round(convert_pounds_kg(262),2))
+]
+#+end_src
+
+#+RESULTS:
+| model           | estimated pounds | estimated kg |
+|-----------------+------------------+--------------|
+| Transformer_base |               26 |        11.79 |
+| Transformer_big  |              192 |        87.09 |
+| BERT_base        |             1438 |       652.27 |
+| NAS             |           626155 |     284018.9 |
+| ELMo            |              262 |       118.84 |
+
+
+#+begin_src python :results value raw :exports results :session
+table = pd.read_csv('expected/training_strubell.csv', sep=',', header=[0,1,2])
+
+rename_multi_index(table, ('model', 'Unnamed: 0_level_1', 'Unnamed: 0_level_2'), ('model', '',''))
+
+def set(model, col, val):
+    table.loc[table[('model', '','')] == model, col] = val
 
 base_model = {
 "server": {
@@ -1481,10 +1438,11 @@ def estimate(model, task,  name, nb_gpus, time):
     model["gpu"][0]["units"] = nb_gpus
     model["usage"]["hours_use_time"] = time
     output = run_experiment(model, task + '_' +  name, directory='Strubell2019energy')
-    print_gwp_and_energy(output)
-    direct_gwp = output["impacts"]["gwp"]['direct']
-    print(f"direct gwp: {convert_kg_pounds(direct_gwp):.2f} lbs")
-    
+    energy, gwp = print_gwp_and_energy(output)
+    print(f"direct gwp: {convert_kg_pounds(gwp):.2f} lbs")
+    set(name, ('estimated','energy ' + task, '(kWh)'), int(energy))
+    set(name, ('estimated','CO2e ' + task, '(kg)'), int(gwp))
+    set(name, ('estimated','CO2e ' + task, '(lbs)'), int(convert_kg_pounds(gwp)))    
 
 def estimates(model, task):
     estimate(model, task, "Transformer_base", 8, 12)
@@ -1502,132 +1460,70 @@ estimates(model_match, "match")
 print("\n\nestimates base parameters")
 estimates(base_model, "base")
 
+
+to_org_table(multi_index_to_multiline_header(table))
 #+end_src
 
 #+RESULTS:
-#+begin_example
-estimates match
-Transformer_base
-estimated impacts: {'gwp': {'embodied': 0.3, 'direct': 16.5, 'total': 17.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 4.0, 'direct': 433.0, 'total': 440.0, 'unit': 'MJ'}, 'adp': {'embodied': 8.3e-05, 'direct': 3.76e-06, 'total': 8.6e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 38.1, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.0084, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.017, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.0027, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: {'value': 38.1, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.3, 'direct': 16.5, 'total': 17.0, 'unit': 'kgCO2eq'}
-direct gwp: 36.38 lbs
-Transformer_big
-estimated impacts: {'gwp': {'embodied': 2.1, 'direct': 116.0, 'total': 120.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 28.0, 'direct': 3030.0, 'total': 3100.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.00058, 'direct': 2.63e-05, 'total': 0.0006, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 267.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.059, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.12, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.019, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: {'value': 267.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 2.1, 'direct': 116.0, 'total': 120.0, 'unit': 'kgCO2eq'}
-direct gwp: 255.74 lbs
-BERT_base
-estimated impacts: {'gwp': {'embodied': 8.7, 'direct': 865.0, 'total': 870.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 120.0, 'direct': 22700.0, 'total': 23000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0029, 'direct': 0.000197, 'total': 0.003, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 2000.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.44, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.89, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.096, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: {'value': 2000.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 8.7, 'direct': 865.0, 'total': 870.0, 'unit': 'kgCO2eq'}
-direct gwp: 1907.00 lbs
-NAS
-estimated impacts: {'gwp': {'embodied': 6800.0, 'direct': 377000.0, 'total': 380000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 92000.0, 'direct': 9900000.0, 'total': 10000000.0, 'unit': 'MJ'}, 'adp': {'embodied': 1.9, 'direct': 0.0859, 'total': 2.0, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 871000.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 190.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 390.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 62.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: {'value': 871000.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 6800.0, 'direct': 377000.0, 'total': 380000.0, 'unit': 'kgCO2eq'}
-direct gwp: 831143.41 lbs
-ELMo
-estimated impacts: {'gwp': {'embodied': 5.7, 'direct': 175.0, 'total': 180.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 77.0, 'direct': 4590.0, 'total': 4700.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0014, 'direct': 3.99e-05, 'total': 0.0015, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 404.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.09, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.18, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.047, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: {'value': 404.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 5.7, 'direct': 175.0, 'total': 180.0, 'unit': 'kgCO2eq'}
-direct gwp: 385.81 lbs
+| model           | expected |    estimated |   estimated | expected |  estimated | estimated | expected |  estimated |   estimated |
+|                 |   energy | energy match | energy base |     CO2e | CO2e match | CO2e base |     CO2e | CO2e match |   CO2e base |
+|                 |    (kWh) |        (kWh) |       (kWh) |     (kg) |       (kg) |      (kg) |    (lbs) |      (lbs) |       (lbs) |
+|-----------------+----------+--------------+-------------+----------+------------+-----------+----------+------------+-------------|
+| Transformer_base |       27 |           38 |          74 |    11.79 |         16 |        27 |       26 |         36 |          61 |
+| Transformer_big  |      201 |          267 |         523 |    87.09 |        116 |       194 |      192 |        255 |         427 |
+| BERT_base        |     1507 |         2000 |        3920 |   652.17 |        865 |      1450 |     1438 |       1907 |        3196 |
+| NAS             |   656347 |       871000 |    1.71e+06 |   284018 |     377000 |    632000 |   626155 |     831143 | 1.39332e+06 |
+| ELMo            |      275 |          404 |         793 |   118.84 |        175 |       293 |      262 |        385 |         645 |
 
-
-estimates base parameters
-Transformer_base
-estimated impacts: {'gwp': {'embodied': 0.3, 'direct': 27.7, 'total': 28.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 4.0, 'direct': 849.0, 'total': 850.0, 'unit': 'MJ'}, 'adp': {'embodied': 8.3e-05, 'direct': 7.37e-06, 'total': 9e-05, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 74.8, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.014, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.028, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.0028, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: {'value': 74.8, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 0.3, 'direct': 27.7, 'total': 28.0, 'unit': 'kgCO2eq'}
-direct gwp: 61.07 lbs
-Transformer_big
-estimated impacts: {'gwp': {'embodied': 2.1, 'direct': 194.0, 'total': 200.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 28.0, 'direct': 5940.0, 'total': 6000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.00058, 'direct': 5.16e-05, 'total': 0.00063, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 523.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.098, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.2, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.02, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: {'value': 523.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 2.1, 'direct': 194.0, 'total': 200.0, 'unit': 'kgCO2eq'}
-direct gwp: 427.70 lbs
-BERT_base
-estimated impacts: {'gwp': {'embodied': 8.7, 'direct': 1450.0, 'total': 1500.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 120.0, 'direct': 44500.0, 'total': 45000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0029, 'direct': 0.000386, 'total': 0.0032, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 3920.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.73, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 1.5, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.1, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: {'value': 3920.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 8.7, 'direct': 1450.0, 'total': 1500.0, 'unit': 'kgCO2eq'}
-direct gwp: 3196.71 lbs
-NAS
-estimated impacts: {'gwp': {'embodied': 6800.0, 'direct': 632000.0, 'total': 640000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 92000.0, 'direct': 19400000.0, 'total': 19000000.0, 'unit': 'MJ'}, 'adp': {'embodied': 1.9, 'direct': 0.168, 'total': 2.1, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 1710000.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 320.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 650.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 65.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: {'value': 1710000.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 6800.0, 'direct': 632000.0, 'total': 640000.0, 'unit': 'kgCO2eq'}
-direct gwp: 1393322.63 lbs
-ELMo
-estimated impacts: {'gwp': {'embodied': 5.7, 'direct': 293.0, 'total': 300.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 77.0, 'direct': 9000.0, 'total': 9100.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0014, 'direct': 7.82e-05, 'total': 0.0015, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 793.0, 'unit': 'kWh'}}
-to put impacts in perspective: {'relative_SNBC': {'value': 0.15, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.3, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.048, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-energy consumption: {'value': 793.0, 'unit': 'kWh'}
-dynamic impacts gwp: {'embodied': 5.7, 'direct': 293.0, 'total': 300.0, 'unit': 'kgCO2eq'}
-direct gwp: 645.95 lbs
-#+end_example
-
-We obtain the folowing results
-
-| model                             | expected energy | estimated energy match | estimated energy base | expected CO_2 e |        | estimated CO_2 e match |        | estimated CO_2 e base |            |
-|                                   |           (kWh) |                  (kWh) |                 (kWh) | (kg)           |  (lbs) |                  (kg) |  (lbs) |                 (kg) |      (lbs) |
-|-----------------------------------+-----------------+------------------------+-----------------------+----------------+--------+-----------------------+--------+----------------------+------------|
-| Transformer_base                   |              27 |                   38.1 |                  74.8 |                |     26 |                  16.5 |  36.38 |                 27.7 |      61.07 |
-| Transformer_big                    |             201 |                    267 |                   523 |                |    192 |                   116 | 255.74 |                  194 |      427.7 |
-| BERT_base                          |            1507 |                   2000 |                  3920 |                |   1438 |                   865 |   1907 |                 1450 |    3196.71 |
-| Neural Architechture Search (NAS) |          656347 |                 871000 |               1710000 |                | 626155 |                377000 | 831143 |               632000 | 1393322.63 |
-| ELMo                              |             275 |                    404 |                   793 |                |    262 |                   175 | 385.81 |                  293 |     645.95 |
-
-We can see that we obtain estimates that are, as expected, a little
+Table \ref{tab:strubell_training} presents the results of our
+estimates. We can see that we obtain estimates that are, as expected, a little
 bit higher than those presented, the differences between the match and base setups can be explained by
 two things: the used Carbon Intensity for the USA in the base values
 is 370gCO_2 e/kWh instead of the 432gCO_2 e/kWh when trying to match.
 The dynamic ratio is roughly twice as high when using the base value
-compared to using the indicated PUE.
+compared to using the indicated \gls{PUE}.
 
-#+begin_src python :results value :exports both
-return(5/.12, 118/.12, 9870/.12)
-#+end_src
+** hyper-parameter search
 
-#+RESULTS:
-| 41.66666666666667 | 983.3333333333334 | 82250.0 |
-
-To complement the case study on hyperparameter search and costs not
+To complement the case study on hyper-parameter search and costs not
 only on training one model but of the whole process, let us try and
 reproduce similar results, which we would be able to study also in
 terms of the other impacts estimated by our tool.
 
-#+begin_src python :results output :exports both :session
+#+begin_src python :results value raw :exports results :session
+table = pd.read_csv('expected/cost_strubell.csv', sep=',', header=[0,1,2])
+
+rename_multi_index(table, ('Models', 'Unnamed: 0_level_1', 'Unnamed: 0_level_2'), ('Models', '', ''))
+rename_multi_index(table, ('Hours', 'Unnamed: 1_level_1', 'Unnamed: 1_level_2'), ('Hours', '', ''))
+
+def set(model, col, val):
+    table.loc[table[('Models', '', '')] == model, col] = val
+
 model = {
-"server": {
-    "configuration":{
-        "ram": [
-            {
-                "units" : 1,
-                "capacity": 1
-            }
-        ]
+    "server": {
+	"configuration":{
+	    "ram": [
+		{
+		    "units" : 1,
+		    "capacity": 1
+		}
+	    ]
+	}
+    },
+    "gpu": [
+	{
+	    "units": 1,
+	    "model": "NVIDIA GTX TITAN X"
+	}
+    ],
+    "psf": 1,
+    "nb_nodes": 1,
+    "cpu_usage": 0,
+    "gpu_usage": 1,
+    "usage": {
+      "hours_use_time": 0,
+      "usage_location": "USA",
     }
-},
-"gpu": [
-    {
-        "units": 1,
-        "model": "NVIDIA GTX TITAN X"
-    }
-],
-"psf": 1,
-"nb_nodes": 1,
-"cpu_usage": 0,
-"gpu_usage": 1,
-"usage": {
-  "hours_use_time": 0,
-  "usage_location": "USA",
-}
 }
 
 def estimate(time, name):
@@ -1636,59 +1532,67 @@ def estimate(time, name):
     energy = output["impacts"]["energy consumption"]["value"]
     cost = energy *.12
     print(f"Direct energy consumption: {energy} kWh, translates to a cost of {cost:2f} $")
+    return cost, energy
 
+def estimate_and_set(time, name):
+    cost, energy = estimate(time, name)
+    set(int(name), ('Estimated', 'energy', '(kWh)'), round(energy,0))
+    set(int(name), ('Estimated', 'electricity', 'cost ($)'), round(cost,0))
 
-estimate(120, "training_one_model")
-estimate(2880, "24_jobs")
-estimate(239942, "4789_jobs")
+estimate_and_set(120, '1')
+estimate_and_set(2880, '24')
+estimate_and_set(239942, '4789')
+
+to_org_table(multi_index_to_multiline_header(table))
 #+end_src
 
 #+RESULTS:
-: estimated impacts: {'gwp': {'embodied': 1.4, 'direct': 34.4, 'total': 36.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 20.0, 'direct': 1060.0, 'total': 1100.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.00038, 'direct': 9.17e-06, 'total': 0.00039, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 93.0, 'unit': 'kWh'}}
-: to put impacts in perspective: {'relative_SNBC': {'value': 0.018, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.036, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.012, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-: Direct energy consumption: 93.0 kWh, translates to a cost of 11.160000 $
-: estimated impacts: {'gwp': {'embodied': 34.0, 'direct': 826.0, 'total': 860.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 470.0, 'direct': 25400.0, 'total': 26000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.0091, 'direct': 0.00022, 'total': 0.0093, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 2230.0, 'unit': 'kWh'}}
-: to put impacts in perspective: {'relative_SNBC': {'value': 0.43, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 0.87, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 0.29, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-: Direct energy consumption: 2230.0 kWh, translates to a cost of 267.600000 $
-: estimated impacts: {'gwp': {'embodied': 2800.0, 'direct': 68800.0, 'total': 72000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 39000.0, 'direct': 2110000.0, 'total': 2200000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.76, 'direct': 0.0183, 'total': 0.78, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 186000.0, 'unit': 'kWh'}}
-: to put impacts in perspective: {'relative_SNBC': {'value': 36.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 73.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 25.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
-: Direct energy consumption: 186000.0 kWh, translates to a cost of 22320.000000 $
-
-If we compare the estimates we produce to thoses presented in the
-paper:
-
-| Models |  Hours | energy | Expected electricity cost | estimated electricity cost |
-|        |        |  (kWh) |                       ($) |                        ($) |
-|      1 |    120 |     93 |                         5 |                         11 |
-|     24 |   2880 |   2230 |                       118 |                        267 |
-|   4789 | 239942 | 186000 |                      9870 |                      22320 |
+| Models |  Hours | Expected | Estimated |    Expected |   Estimated |
+|        |        |   energy |    energy | electricity | electricity |
+|        |        |    (kWh) |     (kWh) |    cost ($) |    cost ($) |
+|--------+--------+----------+-----------+-------------+-------------|
+|      1 |    120 |     41.7 |        93 |           5 |          11 |
+|     24 |   2880 |      983 |      2230 |         118 |         268 |
+|   4789 | 239942 |    82250 |    186000 |        9870 |       22320 |
 
 We can see that we still obtain values approximately twice as high as
 the ones presented. This fact can be mostly explained by the
-difference between using a PUE of 1.58 and a dynamic ratio of 3.1
+difference between using a \gls{PUE} of 1.58 and a dynamic ratio of 3.1
+
+** integrating Life cycle to previous analyses
+
+#+begin_src python :results output :exports results :session
+estimate(239942, "4789_jobs_with_ram")
+#+end_src
+
+#+RESULTS:
+: estimated impacts: {'gwp': {'embodied': 2800.0, 'direct': 68800.0, 'total': 72000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 39000.0, 'direct': 2110000.0, 'total': 2200000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.76, 'direct': 0.0183, 'total': 0.78, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 186000.0, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 36.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 73.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 25.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: Direct energy consumption: 186000.0 kWh, translates to a cost of 22320.000000 $
+: (22320.0, 186000.0)
 
 
 We can see that the full impacts estimated for performing the whole
-model search, hyperparameter tuning and training represents the annual
+model search, hyper-parameter tuning and training represents the annual
 impacts of 36 persons if we place ourselves in a scenario where we
 would respect the "Stratégie Nationale Bas Carbone" for France
 by 2050. If we place ourselves in the framework of the Planetary
 boundaries, where if we want to stay sustainable, societies must not
 overpass the planetary boundaries. The whole process accounts for the
 maximal annual impacts of 73 persons in terms of Green House Gas
-emissions and the annual impacts of 25 persons in terms of ressource
+emissions and the annual impacts of 25 persons in terms of resource
 depletion.
 
 Of course, if computations were to run in a country with a
 less carbon intensive electricity mix, green warming potential would
-be lower. Still, the impacts on ressources depletion are very
+be lower. Still, the impacts on resources depletion are very
 important, and, in this estimation, we do not take into account any (1
 GB) memory on the server that runs the experiments. 
 
 If we were to add memory, for instance 512 GB of memory, we would
 obtain the following estimation
 
-#+begin_src python :results output :exports both :session
+#+begin_src python :results output :exports results :session
 model["server"]["configuration"]["ram"][0]["capacity"] = 512
 estimate(239942, "4789_jobs_with_ram")
 #+end_src
@@ -1698,14 +1602,14 @@ estimate(239942, "4789_jobs_with_ram")
 : to put impacts in perspective: {'relative_SNBC': {'value': 67.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 140.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 34.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 : Direct energy consumption: 327000.0 kWh, translates to a cost of 39240.000000 $
 
-with expected impacts as high as the maximal anual ones of 140 persons
-in terms of GWP and 34 persons in terms of Ressources depletion.
+with expected impacts as high as the maximal annual ones of 140 persons
+in terms of \gls{GWP} and 34 persons in terms of Resources depletion.
 
 As a title of comparison, if we were to make the same estimates but
 running in France, we would obtain the following (with a carbon
 intensity of 98gCO_2 e/kWh)
 
-#+begin_src python :results output :exports both :session
+#+begin_src python :results output :exports results :session
 model["usage"]["usage_location"] = "FRA"
 estimate(239942, "4789_jobs_with_ram_France")
 #+end_src
@@ -1716,5 +1620,413 @@ estimate(239942, "4789_jobs_with_ram_France")
 : Direct energy consumption: 327000.0 kWh, translates to a cost of 39240.000000 $
 
 It would still represent the maximal annual emissions of 45 persons in
-terms of GWP and the maximal impacts of 33 persons in terms of
-ressources depletion
+terms of \gls{GWP} and the maximal impacts of 33 persons in terms of
+resources depletion
+
+
+
+
+* comparing manufacture impacts with Dell LCAs 
+
+** Dell R740 
+   #+begin_src python :results output :exports results :session
+with open("boaviztapi/data/devices/server/dellR740.json", 'r') as m:
+    R740 = json.load(m)
+
+#print(R740)
+out = run_experiment_server(R740, "R740", directory='../results')
+print_impacts_server(out)
+
+
+
+def print_results_components(results):
+    impact_dict = {}
+    impact_dict["MAINBOARD"] =  get_result_component(results,"MOTHERBOARD") +  get_result_component(results,"CPU")
+    for c in ['RAM', 'SSD']:
+        r = get_result_component(results,c)
+        impact_dict[c] = r
+        print(f'{c} gwp: {r} kgCO2eq')
+    total = 0
+    for c in ['POWER_SUPPLY', 'CASE', 'ASSEMBLY']:
+        total += get_result_component(results,c)
+    impact_dict['OTHER'] = total
+    print(f'Other component GWP impacts: {total:.0f} kgCO2eq')
+    return impact_dict
+
+impact_dict = print_results_components(out)
+impact_dict["SSD_3.84GB"] = out['verbose']['SSD-2']["impacts"]['gwp']['value']
+
+   #+end_src
+
+   #+RESULTS:
+   : GWP: {'manufacture': 2400.0, 'use': 1170.0, 'unit': 'kgCO2eq'}
+   : PE: {'manufacture': 31000.0, 'use': 39700.0, 'unit': 'MJ'}
+   : ADP: {'manufacture': 0.19, 'use': 0.000198, 'unit': 'kgSbeq'}
+   : RAM gwp: 540.0 kgCO2eq
+   : SSD gwp: 24.0 kgCO2eq
+   : Other component GWP impacts: 302 kgCO2eq
+
+   #+begin_src python :results pp :exports both :session
+impact_dict
+   #+end_src
+
+   #+RESULTS:
+   : {'MAINBOARD': 111.69999999999999,
+   :  'OTHER': 302.0,
+   :  'RAM': 540.0,
+   :  'SSD': 24.0,
+   :  'SSD_3.84GB': 1440.0}
+
+  wdfsdf
+
+#+begin_src python :results value :exports both :session
+#l = [(n, v) for (n,v) in impact_dict]
+tabulate.tabulate(impact_dict.items(), tablefmt='orgtbl')
+   #+end_src
+
+   #+RESULTS:
+   : | MAINBOARD  |  111.7 |
+   : | RAM        |  540   |
+   : | SSD        |   24   |
+   : | OTHER      |  302   |
+   : | SSD_3.84GB | 1440   |
+
+
+| Component | ACV DELL - GWP (kgCO2eq) | MLCA - GWP (kgCO2eq) | Boavizta - GWP (kgCO2eq) |
+| CPU       |                       47 |                 45.6 |                       43 |
+| RAM       |                      533 |                  540 |                      534 |
+| SSD       |                       64 |                   24 |                       24 |
+| OTHER     |                      266 |                  368 |                      369 |
+| TOTAL     |                      910 |                  970 |                      970 |
+
+We can see that we obtain more or less the same results even after the
+modifications to the way CPU impacts are computed or some bugfixes.
+
+#+begin_src python :results file :exports results :session
+pie_chart(impact_dict, 'R740')
+#+end_src
+
+#+RESULTS:
+[[file:results/../results/12-05-23_20-28_R740.svg]]
+
+
+** Dell R6515, R7515, R7525
+
+#+begin_src python :results output :exports both
+total_energy = (213.92 + 595.11 + 347.16 + 207.39)*4
+CI_europe = (3450 - 1343) / total_energy
+CI_US = (4280 - 1343) / total_energy 
+print(total_energy, CI_europe, CI_US)
+
+print(0.15216000000000002 * 4 *365 * 24)
+#+end_src
+
+#+RESULTS:
+: 5454.32 0.386299300371082 0.5384722568532833
+: 5331.6864000000005
+
+#+begin_src python :results output :exports both :session
+
+with open("boaviztapi/data/devices/server/R6515.json", 'r') as m:
+    R6515 = json.load(m)
+
+R6515["usage"]["workload"] = {
+      "100": {
+        "time": 2.4/24,
+        "power": 1.0
+      },
+      "50": {
+        "time": 8.4/24,
+        "power": 184.1/244.2 
+      },
+      "10": {
+        "time": 7.2/24,
+        "power":  132.1/244.2
+      },
+      "idle": {
+        "time": 6/24,
+        "power": 94.7/244.2
+      }
+    }
+
+
+print("Europe Scenario")
+R6515["usage"]["usage_location"] = "EEE"
+R6515["usage"]["gwp_factor"] =  0.386299300371082
+out = run_experiment_server(R6515, "R6515_Europe", directory='../results')
+print_impacts_server(out)
+
+print("US Scenario")
+R6515["usage"]["usage_location"] = "USA"
+R6515["usage"]["gwp_factor"] = 0.5384722568532833
+out = run_experiment_server(R6515, "R6515_USA", directory='../results')
+print_impacts_server(out)
+
+
+R6525 = R6515
+R6525["configuration"]['cpu']['units'] = 2
+R6525["configuration"]['ram'][0]['units'] = 16
+
+print("R6525 US Scenario")
+out = run_experiment_server(R6525, "R6525_USA", directory='../results')
+print_impacts_server(out)
+#+end_src 
+
+#+RESULTS:
+#+begin_example
+Europe Scenario
+GWP: {'manufacture': 1200.0, 'use': 2060.0, 'unit': 'kgCO2eq'}
+PE: {'manufacture': 15000.0, 'use': 68600.0, 'unit': 'MJ'}
+ADP: {'manufacture': 0.13, 'use': 0.000342, 'unit': 'kgSbeq'}
+US Scenario
+GWP: {'manufacture': 1200.0, 'use': 2870.0, 'unit': 'kgCO2eq'}
+PE: {'manufacture': 15000.0, 'use': 60600.0, 'unit': 'MJ'}
+ADP: {'manufacture': 0.13, 'use': 0.000526, 'unit': 'kgSbeq'}
+R6525 US Scenario
+GWP: {'manufacture': 1600.0, 'use': 2870.0, 'unit': 'kgCO2eq'}
+PE: {'manufacture': 21000.0, 'use': 60600.0, 'unit': 'MJ'}
+ADP: {'manufacture': 0.17, 'use': 0.000526, 'unit': 'kgSbeq'}
+#+end_example
+
+#+begin_quote
+
+In the case of Dell R6515, the manufacturing has a contribution of 1,343 kg CO2e, approximately 39% to
+the total of the life cycle impact in the light-medium use scenario
+
+#+end_quote
+
+For the manufacture of the R6515, we obtain an estimate of 1200 kgCO_2
+e when the expected results stand at 1343 kgCO_2 e.
+
+For the R6525, we obtain an estimate of 1600 kgCO_2 e when the expected
+result stands at 1709 kgCO_2 e.
+
+
+* replicating the Bloom estimates from \cite{Luccioni2022estimating}
+
+** Gathering information about the setup
+To replicate their experiments, we first need to gather some
+information on the time duration and hardware setup for the training
+phase.
+
+We can see in the paper that the training phase lasted for 118 days, 5
+hours and 41 minutes for a total of 1,082,990 GPU hours. (table 1)
+
+in section 4.1, we can read that training used on average 48 computing
+nodes with 8 GPUs each.
+
+
+#+begin_src python :results value :exports none
+real_time_hours = 118*24 + 5 + 41/60
+estimated_gpu_hours = real_time_hours * 48 * 8
+return estimated_gpu_hours
+#+end_src
+
+#+RESULTS:
+: 1089670.4
+
+Combining the real time and these information about the setup, we obtain an estimate of the number of GPU hours of 1,089,670.4 hours
+this gives us a pretty close figure to the real GPU time.
+
+It is written in the paper that training took place on the Jean Zay
+supercomputer, using [[https://buy.hpe.com/fr/fr/compute/apollo-systems/apollo-6500-system/apollo-6500-system/hpe-apollo-6500-gen10-plus-system/p/1013092236][HPE's Apollo 6500 Gen10 Plus]]. We can read on
+their website that it uses AMD EPYC 7000 Series CPUs. Combining this
+information with information about the Jean Zay supercomputer on
+[[http://www.idris.fr/jean-zay/cpu/jean-zay-cpu-hw.html#gpu_p13][IDRIS's website]], we can see that only the **gpu_p5**  partition uses
+such CPUs. 
+We can conclude that for each of the 48 used nodes, the server
+configuration is :
++ 2 CPUs : AMD Milan EPYC 7543
++ 512 Go of Memory
++ 8 NVIDIA A100 SXM4 80Go
+
+** comparing the server footprint with the PCF sheet.
+
+   In section 4.1, it is stated that they use values provided in the
+   [[https://www.hpe.com/psnow/doc/a50005151enw][HPE ProLiant DL345 Gen10 Plus PCF]], the closest server with
+   information provided. In this PCF sheet, we can read that servers
+   are of type rack and that the estimated Carbon Footprint is of
+   2503.2 kg CO_2 e.
+   If we try our tool with the server configuration used for training,
+   we obtain :
+
+   #+begin_src python :results output :exports results :session
+server = {
+    "model": {
+      "type": "rack"
+    },
+    "configuration": {
+      "cpu": {
+        "units": 2,
+        "model": "AMD Milan EPYC 7543"
+      },
+      "ram": [
+        {
+          "units": 1,
+          "capacity": 512
+        }
+      ]
+    }
+}
+out = run_experiment_server(server, "HPE ProLiant DL345 Gen10 Plus")
+print_impacts_server(out)
+ram_gwp = out['verbose']["RAM-1"]['impacts']['gwp']
+print(f"RAM impact GWP: {ram_gwp}")
+   #+end_src
+
+   #+RESULTS:
+   : GWP: {'manufacture': 2300.0, 'use': 1170.0, 'unit': 'kgCO2eq'}
+   : PE: {'manufacture': 29000.0, 'use': 39700.0, 'unit': 'MJ'}
+   : ADP: {'manufacture': 0.17, 'use': 0.000198, 'unit': 'kgSbeq'}
+   : RAM impact GWP: {'value': 1800.0, 'unit': 'kgCO2eq'}
+
+we can see manufacture impacts of 2300 kg CO_2 e. This impact is close
+to the 2500 kgCO_2 e provided on the PCF sheet and is mainly impacted
+by the quantity of memory used, as it accounts for 1800 kg CO_2 e.
+
+** comparing the GPU footprint with the chosen value
+
+In section 4.1, it is stated that a value of 150 kg CO_2 e is
+chosen. Taking a look at the source, there is no real justification
+given for that value. Given that in \cite{Loubet2023life} a small GPUs
+manufacture is estimated at emitting around 30 kg CO_2 e, we can
+hypothesize that GPU manufacture impacts would be in the order of 50
+to 150 kg CO_2 e.
+
+#+begin_src shell :results output :exports none
+curl -X 'POST' \
+  'http://localhost:5000/v1/component/gpu?verbose=true' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "model": "NVIDIA A100 SXM4 80 GB"
+}'
+#+end_src
+
+#+RESULTS:
+: {"impacts":{"gwp":{"manufacture":310.0,"use":"not implemented","unit":"kgCO2eq"},"pe":{"manufacture":3900.0,"use":"not implemented","unit":"MJ"},"adp":{"manufacture":0.03,"use":"not implemented","unit":"kgSbeq"}},"verbose":{"units":1,"die_size":{"input_value":null,"used_value":8.26,"status":"SET"},"model":{"input_value":"NVIDIA A100 SXM4 80 GB","used_value":"NVIDIA A100 SXM4 80 GB","status":"UNCHANGED"},"tdp":{"input_value":null,"used_value":400,"status":"SET"},"memory_size":{"input_value":null,"used_value":80,"status":"SET"},"memory":{"capacity":{"input_value":null,"used_value":80,"status":"SET"},"density":{"input_value":null,"used_value":0.625,"status":"SET"},"impacts":{"gwp":{"value":290.0,"unit":"kgCO2eq"},"pe":{"value":3600.0,"unit":"MJ"},"adp":{"value":0.0098,"unit":"kgSbeq"}}},"impacts":{"gwp":{"value":310.0,"unit":"kgCO2eq"},"pe":{"value":3900.0,"unit":"MJ"},"adp":{"value":0.03,"unit":"kgSbeq"}}}}
+
+For the specific model used, the "NVIDIA A100 SMX4 80GB", we can see
+a manufacture impact of 310 kgCO_2 e. this impact is mainly influenced
+by the quantity of memory on the GPU with 290 kg CO_2 e.
+These are preliminary results since the base value for gpu impacts is
+not properly set yet.
+
+** Estimating the total impacts
+
+with all of the previous information, we can run the estimation
+
+#+begin_src python :results output :exports none :session
+with open("boaviztapi/data/ml_setups/test_bloom.json",'r') as bloom:
+    bloom_model = json.load(bloom)
+out = run_experiment(bloom_model,"bloom")
+embodied = out["verbose"]["embodied impacts"]["gwp"]
+dynamic = out["verbose"]["dynamic impacts"]["gwp"]
+dynamic_energy = out['verbose']['dynamic energy consumption']
+print(f"embodied impacts gwp: {embodied}")
+print(f"dynamic impacts gwp: {dynamic}")
+print(f"dynamic energy consumption: {dynamic_energy}")
+#+end_src
+
+#+RESULTS:
+: estimated impacts: {'gwp': {'embodied': 15000.0, 'direct': 83100.0, 'total': 98000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 190000.0, 'direct': 18300000.0, 'total': 18000000.0, 'unit': 'MJ'}, 'adp': {'embodied': 1.3, 'direct': 0.0788, 'total': 1.3, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 1620000.0, 'unit': 'kWh'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 49.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 99.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 42.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: embodied impacts gwp: {'server': 7000.0, 'gpus': 7600.0, 'unit': 'kgCO2eq'}
+: dynamic impacts gwp: {'value': 26800.0, 'gpus': 22400.0, 'ram': 1350.0, 'cpus': 3140.0, 'unit': 'kgCO2eq'}
+: dynamic energy consumption: {'value': 10900.0, 'unit': 'kWh'}
+
+we can see in the results (full result in results/datetime bloom.json) that we obtain close figures to those in the
+paper.
+with embodied impacts of 7T CO_2 e for the servers and 7.6T for the
+GPUs to compare with the 7.6T for the servers and 3.6 T for the GPUs
+in the paper. Most of the difference is due to estimated impacts of
+300 kgCO_2 e for one GPU while it was estimated to 125 kgCO_2 e in the
+paper.
+
+For the dynamic consumption, we obtain an estimate of 26.8T CO_2 e,
+mainly due to the GPUs (accountable for 25T, the only difference with
+the figure obtained in the paper being the slightly off conversion
+from real time to GPU hours) while the memory, not accounted for in
+the paper brings another 1.5T CO_2 e.
+
+The only thing that differs greatly is the value for the idle
+consumption. (not so surprising since figures differ quite a lot).
+
+
+* Conclusions
+
+After these experiments trying to evaluate the validity of our tool,
+we can draw some conclusions, firstly about the challenges of
+replicating results and then about the validity of our tool.
+
+** about the replication of results
+
+Overall, reproducing results from different papers proved way harder
+than expected. Indeed, Unless a real effort is made by authors to allow replication of
+their results, it is most of the time really difficult to find
+enough information to run estimates and reproduce their
+results.
+This is also particularly true for results produced
+using a measurement tool, indeed, If the hardware on which those
+results were produced isn't detailed, it is impossible to
+reproduce the experiments and check the quality of the results
+presented. We were only able to conduct experiments for all of these
+papers because we were able to contact the authors and they were
+able to give us some insight about the hardware configuration of their experiments.
+
+Even when we had enough information to run our estimates precisely
+enough to hopefully match the expected results, we faced multiple
+times important errors and inconsistencies in the data presented in
+different tables. This was for example the case with the results
+presented in \cite{Bannour2021evaluating} and in
+\cite{Cattan2022benchmarking}. This was also the case to a lesser
+extent in \cite{Jay2023experimental} were a notable effort for
+reproducibility was realised by the authors but there were still
+some problems and assumptions that needed to be made in order to
+reproduce the results. 
+After pointing out the problems with the data presented in
+\cite{Cattan2022benchmarking}, the authors conducted new experiments
+to resolve the problems with their data and we were able to reproduce
+these new results.
+
+** about the validity of the tool
+
+Running new experiments often required us to gather some information
+about a CPU not present in our database. This was not needed for
+GPUs. It seems like there is much more diversity in CPUs used than in
+GPU used. However, it was relatively easy to find all the information
+we needed when encountering a new CPU and when running estimations
+about GPU intensive tasks such as training NLP models, the CPU usage
+is often set close to 0. Moreover, CPU manufacturing does not play a
+huge part in the manufacturing impacts of a server in terms of
+\gls{GWP}, it does however play an important part of the impacts in
+terms of mineral resource usage (ADP)
+
+We were unfortunately not able to find experiments to demonstrate the
+validity of other indicators than the Global Warming Potential.
+
+Still, we can see that overall, we were able to reproduce results for the
+dynamic consumption and for the embodied impacts. These experiments
+also demonstrate the usability of our tool in diverse scenarios.
+
+
+* remaining stuff TODO                                             :noexport:
+
+faire des jolis camemberts ?
+de manière générale rédiger la section sur la comparaison aux ACV.
+
+
+faire un truc sur la variation du dynamic ratio ?
+variation de la durée de vie ?
+baisser le dynamic ratio mais baisser la durée de vie du
+matériel. (scenario à la patterson)
+
+
+
+
+
+
+/!\ résultats de variabilité qui exploitent ADP dans strubell, à
+modifier quand changement dynamic ratio sera fait.
+
+On en est à Dinarelli dans la relecture. 
