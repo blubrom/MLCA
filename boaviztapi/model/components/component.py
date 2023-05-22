@@ -566,16 +566,15 @@ class ComponentAssembly(Component):
 
 class ComponentGPU(Component):
     TYPE = "GPU"
-
-    # impact factors chosen are the same as for CPUs for now
-    # die impacts should not change but base impacts should,
-    # once we gather specific data from at leat a GPU
+    # impact factors are obtained from   Loubet, P., Vincent, A., Collin, A., Dejous, C., Ghiotto, A., and Jego, C.(2023).
+    # Life cycle assessment of ict in higher education: a comparison between desktop andsingle-board computers.
+    # The International Journal of Life Cycle Assessment, pages 1–19
     # /!\ factor units is per cm² not per mm²
     # for more details on what each quantity stands for, look at CPU._IMPACT_FACTOR_DICT
     _IMPACT_FACTOR_DICT = {
         "gwp": {
             "die_impact": 1.97,
-            "impact": 9.14
+            "impact":  26.970966666666666 
         },
         "pe": {
             "die_impact": 26.50,
@@ -583,7 +582,7 @@ class ComponentGPU(Component):
         },
         "adp": {
             "die_impact": 5.80E-07,
-            "impact": 2.04E-02
+            "impact": 0.0170687302
         },
     }
 

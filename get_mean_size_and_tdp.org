@@ -31,3 +31,34 @@ summary(df)
 
 [1] NA
 #+end_example
+
+
+To compute the base impact values for a GPU, we use the results from
+\cite{Loubet2023life}.
+Results for scenario 2 are given for 6 servers. Each server contains 2
+GPUs, each with a die of .81cm².
+If we divide the total results for GPUs in scenario 2 by 12 (6
+servers * 2 GPu), we obtain impacts per GPU. Then, by removing the
+estimated impacts for .81cm² of die, we get some base results.
+We also need to convert from Copper equivalent to Antimony
+equivalent. to do so, we base ourselves on \cite{van2020abiotic} where
+it is shown that one kg of Copper is approximately equivalent in terms of ADP to
+0.02 kg of Antimony equivalent.
+
+Since results presented in \cite{Loubet2023life} do not present
+Primary energy, we are not able to provide any figure and will
+therefore use the base value for CPU.
+
+#+begin_src python :results value :exports both
+return 342.80 /12 - 1.97*.81, 10.24152 / 12 * 2E-2 - 5.80E-07*.81
+#+end_src
+
+#+RESULTS:
+| 26.970966666666666 | 0.0170687302 |
+
+#+begin_src python :results value :exports both
+return 1/0.00191
+#+end_src
+
+#+RESULTS:
+: 523.5602094240837

@@ -2029,4 +2029,6 @@ matériel. (scenario à la patterson)
 /!\ résultats de variabilité qui exploitent ADP dans strubell, à
 modifier quand changement dynamic ratio sera fait.
 
-On en est à Dinarelli dans la relecture. 
+
+modifier le code pour mettre des valeurs approximatives pour les GPU
+modifier dynamic ratio
