@@ -1,5 +1,6 @@
 model,expected,estimated,expected,estimated
-, power (kWh),power (kWh),carbon (gCO2e),carbon (gCO2e)
+, power,power,carbon,carbon
+,(kWh),(kWh),(gCO2e),(gCO2e)
 spectro 3 steps,4.473,,228,517
 spectro 2 steps,2.989,6.78,152,346
 spectro 1 step,1.708,4.44,87,226
