@@ -883,8 +883,8 @@ def estimate(steps, hours, minutes):
     training_SLU_model['usage']['minute_use_time'] = minutes
     output = run_experiment(training_SLU_model, f'PortMEDIA_spectro_{steps}-steps',  directory='Dinarelli2022toward')
     energy, gwp = print_gwp_and_energy(output)
-    set(name, ('estimated', 'power (kWh)'), energy)
-    set(name, ('estimated', 'carbon (gCO2e)'), int(gwp * 1000))
+    set(name, ('estimated', 'power', '(kWh)'), energy)
+    set(name, ('estimated', 'carbon', '(gCO2e)'), int(gwp * 1000))
 
 estimate(3,36,14)
 estimate(2,24,14)
@@ -900,7 +900,7 @@ to_org_table(multi_index_to_multiline_header(table))
     |                 |      power |       power |     carbon |      carbon |
     |                 |      (kWh) |       (kWh) |    (gCO2e) |     (gCO2e) |
     |-----------------+------------+-------------+------------+-------------|
-    | spectro 3 steps |      4.473 |      nan    |        228 |         517 |
+    | spectro 3 steps |      4.473 |       10.1  |        228 |         517 |
     | spectro 2 steps |      2.989 |        6.78 |        152 |         346 |
     | spectro 1 step  |      1.708 |        4.44 |         87 |         226 |
     :end:
