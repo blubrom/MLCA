@@ -1,0 +1,7 @@
+model,expected energy,estimated energy match,estimated energy base,expected CO_2 e,expected CO_2 e,estimated CO_2 e match,estimated CO_2 e match, estimated CO_2 e base,estimated CO_2 e base
+,(kWh),(kWh),(kWh),(kg),(lbs),(kg),(lbs),(kg),(lbs),
+Transformer_base,27,38.1,74.8,11.79,26,16.5,36.38,27.7,61.07
+Transformer_big,201,267,523,87.09,192,116,255.74,194,427.7
+BERT_base,1507,2000,3920,652.17,1438,865,1907,1450,3196.71
+NAS,656347,871000,1710000,284018,626155,377000,831143,632000,1393322.63
+ELMo,275,404,793,118.84,262,175,385.81,293,645.95

@@ -118,7 +118,7 @@ def print_gwp_and_energy(results):
     dynamic_energy = results["impacts"]["energy consumption"]
     direct_gwp = results["impacts"]["gwp"]
     print(f"energy consumption: {dynamic_energy}")
-    print(f"dynamic impacts gwp: {direct_gwp}")
+    print(f"usage impacts gwp: {direct_gwp}")
     return dynamic_energy['value'], direct_gwp['direct']
 #+end_src
 
@@ -191,10 +191,21 @@ def multi_index_to_multiline_header(table):
 
   #+RESULTS:
 
+#+begin_src python :results output :session :exports both
+def get_results(out):
+    gwp = out["impacts"]['gwp']['total']
+    pe = out["impacts"]['pe']['total']
+    adp = out["impacts"]['adp']['total']
+    return gwp,adp,pe
+#+end_src
+
+#+RESULTS:
+
 ** R
 #+begin_src R :results silent :session *R* :exports both
 library(ggplot2)
 library(dplyr)
+library(scales)
 #+end_src
 
 #+begin_src R :results output :session *R* :exports both
@@ -202,12 +213,14 @@ library(dplyr)
 data$process <- factor(data$process, levels = unique(data$process))
  data %>%
   ggplot(aes(x = component, y = GWP, fill=process)) +
-  geom_col(width = 0.2, position="dodge") +
+  geom_col(width = 0.8, position="dodge") +
+  scale_x_discrete(labels = label_wrap(10)) +
   labs(x = "Component",
        y  = "GWP (kgCO_2 e)",
-       title = paste("Component-wise comparison of the carbon footprint of manufacture of  the", name, "server")) +
+       title = paste("Component-wise comparison of the carbon footprint\n of manufacturing of the", name, "server")) +
     scale_color_manual(values =
-                       c("darkgreen", "blue", "purple"));
+                       c("darkgreen", "blue", "purple")) +
+  theme(text = element_text(size = 20))  ;
   }
 #+end_src
 
@@ -1374,6 +1387,7 @@ running our estimations.
 
 ** running our estimations
 
+*** First checks :noexport:
 For a first check, we will compare the estimated power consumption of
 just the GPUs with the presented hardware consumption. The \gls{TDP} of a
 P100 GPU is 250W, also the same as the one of a GTX 1080 ti.
@@ -1392,6 +1406,13 @@ None,
 #+end_src
 
 #+RESULTS:
+| model           | estimated | measured |
+|-----------------+-----------+----------|
+| Transformer_base |      2000 |  1415.78 |
+| Transformer_big  |      2000 |  1515.43 |
+| ELMo            |       750 |   517.66 |
+| BERT_base        |     16000 | 12041.51 |
+| NAS             |      2000 |  1515.43 |
 
 #+ATTR_LATEX: :float t :caption \caption{Comparison of estimated and measured power consumption. Estimates only take into account the GPU used} 
 | model           | estimated | measured |
@@ -1432,6 +1453,39 @@ None,
 | ELMo            |              262 |       118.84 |
 
 
+*** approximating the GPU usage factor
+
+Using the ratio of average measured power consumption to total TDP, we
+can deduce an approximation of the GPU usage factor (assuming that the
+vast majority of power draw comes from the GPUs)
+
+| model           | estimated | measured |
+|-----------------+-----------+----------|
+| Transformer_base |      2000 |  1415.78 |
+| Transformer_big  |      2000 |  1515.43 |
+| ELMo            |       750 |   517.66 |
+| BERT_base        |     16000 | 12041.51 |
+
+#+begin_src python :results silent :session :exports none
+usage_dict = {
+'Transformer_base': 1415.78/2000, 'Transformer_big': 1515.43/2000,'ELMo': 517.66/750, 'BERT_base': 12041.51/16000
+}
+#+end_src
+
+#+begin_src python :results value :exports results
+return [('model', 'estimated GPU usage'),None,('Transformer_base', 1415.78/2000), ('Transformer_big', 1515.43/2000),('ELMo', 517.66/750),('BERT_base',12041.51/16000)]
+#+end_src
+
+#+RESULTS:
+| model           | estimated GPU usage |
+|-----------------+---------------------|
+| Transformer_base |             0.70789 |
+| Transformer_big  |            0.757715 |
+| ELMo            |  0.6902133333333333 |
+| BERT_base        |         0.752594375 |
+
+
+*** estimates
 
 #+begin_src python :post attr_wrap(caption="Comparison of the presented measures with our estimates", data=*this*) :results drawer :exports results :session
 table = pd.read_csv('expected/training_strubell.csv', sep=',', header=[0,1,2])
@@ -1481,6 +1535,7 @@ def estimate(model, task,  name, nb_gpus, time):
     print(name)
     model["gpu"][0]["units"] = nb_gpus
     model["usage"]["hours_use_time"] = time
+    model['gpu_usage'] = usage_dict[name]
     output = run_experiment(model, task + '_' +  name, directory='Strubell2019energy')
     energy, gwp = print_gwp_and_energy(output)
     print(f"direct gwp: {convert_kg_pounds(gwp):.2f} lbs")
@@ -1492,7 +1547,7 @@ def estimates(model, task):
     estimate(model, task, "Transformer_base", 8, 12)
     estimate(model, task, "Transformer_big", 8, 84)
     estimate(model, task, "BERT_base", 64, 79)
-    estimate(model, task, "NAS", 8, 274120)
+    #estimate(model, task, "NAS", 8, 274120)
     model["gpu"] = [{
         "units": 3,
         "model": "NVIDIA GeForce GTX 1080 Ti"
@@ -1509,18 +1564,18 @@ to_org_table(multi_index_to_multiline_header(table))
 #+end_src
 
 #+RESULTS:
-:results:
+:RESULTS:
 #+ATTR_LATEX: :float t :caption \caption{Comparison of the presented measures with our estimates} 
 | model            |   expected |      estimated |     estimated |   expected |    estimated |   estimated |   expected |    estimated |      estimated |
 |                  |     energy |   energy match |   energy base |       CO2e |   CO2e match |   CO2e base |       CO2e |   CO2e match |      CO2e base |
 |                  |      (kWh) |          (kWh) |         (kWh) |       (kg) |         (kg) |        (kg) |      (lbs) |        (lbs) |          (lbs) |
 |------------------+------------+----------------+---------------+------------+--------------+-------------+------------+--------------+----------------|
-| Transformer_base |         27 |           38.1 |     74.8      |      11.79 |         16.5 |        27.7 |         26 |        36.38 |   61.07        |
-| Transformer_big  |        201 |          267   |    523        |      87.09 |        116   |       194   |        192 |       255.74 |  427.7         |
-| BERT_base        |       1507 |         2000   |   3920        |     652.17 |        865   |      1450   |       1438 |      1907    | 3196.71        |
-| NAS              |     656347 |       871000   |      1.71e+06 |  284018    |     377000   |    632000   |     626155 |    831143    |    1.39332e+06 |
-| ELMo             |        275 |          404   |    793        |     118.84 |        175   |       293   |        262 |       385.81 |  645.95        |
-:end:
+| Transformer_base |         27 |             27 |     31        |      11.79 |           11 |          11 |         26 |           25 |   25           |
+| Transformer_big  |        201 |            203 |    235        |      87.09 |           87 |          87 |        192 |          193 |  192           |
+| BERT_base        |       1507 |           1500 |   1750        |     652.17 |          651 |         646 |       1438 |         1435 | 1424           |
+| NAS              |     656347 |         871000 |      1.71e+06 |  284018    |       377000 |      632000 |     626155 |       831143 |    1.39332e+06 |
+| ELMo             |        275 |            281 |    326        |     118.84 |          122 |         121 |        262 |          268 |  266           |
+:END:
 
 Table \ref{tab:strubell_training} presents the results of our
 estimates on two different scenarios. The first one (match) uses the
@@ -1600,7 +1655,7 @@ to_org_table(multi_index_to_multiline_header(table))
 #+end_src
 
 #+RESULTS:
-:results:
+:RESULTS:
 #+ATTR_LATEX: :float t :caption \caption{Comparison of the expected energy consumption and cost with our estimates} 
 |   Models |   Hours |   Expected |   Estimated |      Expected |     Estimated |
 |          |         |     energy |      energy |   electricity |   electricity |
@@ -1609,7 +1664,7 @@ to_org_table(multi_index_to_multiline_header(table))
 |        1 |     120 |       41.7 |          55 |             5 |             7 |
 |       24 |    2880 |      983   |        1320 |           118 |           158 |
 |     4789 |  239942 |    82250   |      110000 |          9870 |         13200 |
-:end:
+:END:
 
 Table \ref{tab:strubell_cost} compares the estimated energy consumption
 and elecrity costs with the expected ones. We can see that we still obtain higher energy consumption  values thans
@@ -1626,7 +1681,7 @@ estimate(239942, "4789_jobs_with_ram")
 
 #+RESULTS:
 : estimated impacts: {'gwp': {'embodied': 2900.0, 'direct': 40800.0, 'total': 44000.0, 'unit': 'kgCO2eq'}, 'pe': {'embodied': 39000.0, 'direct': 1250000.0, 'total': 1300000.0, 'unit': 'MJ'}, 'adp': {'embodied': 0.74, 'direct': 0.0109, 'total': 0.75, 'unit': 'kgSbeq'}, 'energy consumption': {'value': 110000.0, 'unit': 'kWh'}}
-: to put impacts in perspective: {'relative_SNBC': {'value': 22.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, relative_PB_Climate_Change': {'value': 44.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 24.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
+: to put impacts in perspective: {'relative_SNBC': {'value': 22.0, 'unit': 'Emissions of X Person per year in the "Stratégie Nationale Bas Carbone (SNBC)" sustanability objectives for France'}, 'relative_PB_Climate_Change': {'value': 44.0, 'unit': 'person in a scenario where the Planetary Boundary for Climate Change is not exceded'}, 'relative_PB_ADP': {'value': 24.0, 'unit': 'person in a scenario where the Planetary Boundary for Abiotic Ressources Deplition is not exceded'}}
 : Direct energy consumption: 110000.0 kWh, translates to a cost of 13200.000000 $
 : (13200.0, 110000.0)
 
@@ -1688,6 +1743,230 @@ embodied impacts and of considering other impacts than just the carbon footprint
 
 
 
+** New exepriments with finer accounting of the servers used
+
+As it is really complex to find data regarding the hardware used in
+TPUs, the experiments done with google's TPU will not be included
+
+for the ELMo and Transformer case, the papers do not detail the
+hardware. Just the graphics cards used are indicated in Caswani et. al
+for the transformer models. 
+
+For the memory use and CPU used for these two models:
+- According to [[https://docs.deeppavlov.ai/en/0.9.0/apiref/models/elmo.html][this blogpost]], 32GB memory are required to train ELmo
+- According to [[https://www.trentonbricken.com/TransformerMemoryRequirements/][this blogpost]], 32GB memory should also work to train a
+  Transformer with 65M parameters and 64GB memory should work to train
+  a Transformer with 213M parameters
+- for the CPU, a CPU used in servers from the same period will be
+  used, specificaly, the CPU used in the Nvidia DGX-2H server, that
+  was used to train BERT in the experiments described in the Strubell
+  *et al.* paper: 2 Intel Xeon Platinum 8174
+
+For the GPU usage factor, in order to not overestimate too much, a
+value will be computed from the total consumption estimated by
+Strubell and colleagues (supposing that the vast majority of
+consumption comes from the GPU, the power consumption indicatged in
+the paper are entirely attributed to the GPU).
+
+For the remaining hardware, we will use the default values of MLCA.
+
+*** experiments setup
+
+define the setup that will be used to run Transformer and ELMo
+experiments.   
+
+#+begin_src python :results output :session :exports none
+base_setup = {
+"server": {
+"configuration": {
+      "cpu": {
+        "units": 2,
+        "model": "Xeon Platinum 8174"
+      },
+      "ram": [
+        {
+          "units": 1,
+          "capacity": 32
+        }
+      ]
+    }
+},
+"gpu": [
+    {
+        "units": 1,
+        "model": "NVIDIA Tesla P100 PCIe 16GB"
+    }
+],
+"psf": 1,
+"nb_nodes": 1,
+"cpu_usage": 0,
+"gpu_usage": 1,
+"usage": {
+  "hours_use_time": 79.2,
+  "usage_location": "USA",
+}
+}
+#+end_src
+
+#+RESULTS:
+
+For Bert, it is stated in the paper that the estimates where run on
+Nvidia 4 DGX-2H servers whose specifications are available at [[https://www.nvidia.com/content/dam/en-zz/es_em/Solutions/Data-Center/dgx-2/dgx-2h-datasheet-us-nvidia-841283-r6-web.pdf][this
+website]], each server comprising 2 Intel Xeon Platinum 8174 CPU, 2*
+960GB NVME SSDs, 1.5TB memory 
+
+#+begin_src python :results output :session :exports none
+with open("boaviztapi/data/devices/server/DGX-2H.json", 'r') as m:
+    DGX_2H = json.load(m)
+
+DGX_2H_setup = {
+"server": DGX_2H,
+"gpu": [
+    {
+        "units": 16,
+        "model": "NVIDIA Tesla V100 SXM2 32 GB"
+    }
+],
+"psf": 1,
+"nb_nodes": 4,
+"cpu_usage": 0,
+"gpu_usage": 1,
+"usage": {
+  "hours_use_time": 79.2,
+  "usage_location": "USA",
+}
+}
+#+end_src
+
+#+RESULTS:
+
+create the different models for the different sensitivity analyses
+
+#+begin_src python :results output :session :exports none
+def get_min_alloc_setup(model):
+    setup_min_alloc = copy.deepcopy(model)
+    setup_min_alloc['average_usage'] = .95
+    setup_min_alloc['hardware_replacement_rate'] = 8
+    return setup_min_alloc
+
+def get_max_alloc_setup(model):
+    setup_max_alloc = copy.deepcopy(model)
+    setup_max_alloc['average_usage'] = .1
+    setup_max_alloc['hardware_replacement_rate'] = 1
+    return setup_max_alloc
+
+def get_facebook_alloc_setup(model):
+    setup_max_alloc = copy.deepcopy(model)
+    setup_max_alloc['average_usage'] = .5
+    setup_max_alloc['hardware_replacement_rate'] = 3
+    return setup_max_alloc
+
+
+def get_different_density(model, density):
+    setup_new_density = copy.deepcopy(model)
+    setup_new_density['gpu'][0]['memory_density'] = density
+    setup_new_density['server']['configuration']['ram'][0]['density'] = density
+    return setup_new_density
+
+def get_different_location(model,location):
+    setup_new_location = copy.deepcopy(model)
+    setup_new_location['usage']['usage_location'] = location
+    return setup_new_location
+#+end_src
+
+#+RESULTS:
+
+define functions to run the estimates
+
+#+begin_src python :results output :session :exports none
+def estimate(model, task,  name, gpu, nb_gpus, time):
+    print(name)
+    model["gpu"][0]["units"] = nb_gpus
+    model["gpu"][0]['model'] = gpu
+    model["usage"]["hours_use_time"] = time
+    model['gpu_usage'] = usage_dict[name]
+    model_min = get_min_alloc_setup(model)
+    model_max = get_max_alloc_setup(model)
+    model_facebook = get_facebook_alloc_setup(model)
+    output_base = run_experiment(model, task + '_' +  name, directory='Strubell2019energy')
+    output_min = run_experiment(model_min, task + '_min_alloc_' +  name, directory='Strubell2019energy')
+    output_max = run_experiment(model_max, task + '_max_alloc' +  name, directory='Strubell2019energy')
+    output_facebook = run_experiment(model_facebook, task + '_facebook_' +  name, directory='Strubell2019energy')
+    gwp,adp,pe = get_results(output_base)
+    gwp_facebook, adp_facebook, pe_facebook = get_results(output_facebook)
+    gwp_min,adp_min,pe_min = get_results(output_min) 
+    gwp_max,adp_max,pe_max = get_results(output_max)
+   
+    set(name, (task, 'GWP', '(\COtwo{})'), f'{gwp} [{gwp_min},{gwp_facebook},{gwp_max}]')
+    set(name, (task, 'ADP', '(\Sbe{})'), f'{adp} [{adp_min},{adp_facebook},{adp_max}]')
+    set(name, (task, 'PE', '(MJ)'), f'{pe} [{pe_min},{pe_facebook},{pe_max}]')    
+
+def estimates(model_base, model_BERT, task):
+    estimate(model_base, task, "Transformer_base", 'NVIDIA Tesla P100 PCIe 16 GB', 8, 12)
+    estimate(model_base, task, "Transformer_big", 'NVIDIA Tesla P100 PCIe 16 GB',  8, 84)
+    estimate(model_base, task, "ELMo", 'NVIDIA GeForce GTX 1080 Ti', 3, 336)
+    estimate(model_BERT, task, "BERT_base", 'NVIDIA Tesla V100 SXM2 32 GB', 16, 79)
+#+end_src
+
+#+RESULTS:
+
+
+*** sensitivity
+
+To test the sensitivity of the results on the different parameters,
+changes to the density of memory, lifespan of servers and usage ratio
+will be tested. For the lifespan and usage ratio, we will produce an
+uncertainty interval, as we suppose that these parameters are easily
+bounded.
+We suppose that no servers have a mean lifespan of less than 1 year
+and no more than 8 years, and suppose that the servers never have a
+usage ratio of less than 10% and never have a higher ratio than 95%.
+
+Results will therefore be compared when using the default value and
+the values producting the highest (lowest lifespan and usage) and lowest
+(highest lifespan and usage) impacts. A comparison taking the values
+given in \cite{Wu2022sutainable} for the lifespan and usage of
+facebook ML servers (3 years, used 50% of the time)
+
+For the sensitivity to changes in the estimated memory density, we wil
+test to scenarios, one when using the default value and another one
+when using the density used in \cite{Groger2021green} 
+
+Sensitivity to changes in location will be explored through two
+different scenarios, one in France and one in the USA.
+
+*** running the estimates
+
+#+begin_src python : post attr_wrap(caption="Comparison of the presented measures with our estimates", data=*this*) :results drawer :session :exports results
+table = pd.read_csv('expected/training_strubell_new.csv', sep=',', header=[0,1,2])
+
+rename_multi_index(table, ('model', 'Unnamed: 0_level_1', 'Unnamed: 0_level_2'), ('model', '',''))
+
+def set(model, col, val):
+    table.loc[table[('model', '','')] == model, col] = val
+
+
+print("estimates base parameters")
+estimates(base_setup,DGX_2H_setup, "base")
+print("\n\nestimates changed density")
+estimates(get_different_density(base_setup,1.875),get_different_density(DGX_2H_setup,1.875), "changed_density")
+print("\n\nestimates changed location")
+estimates(get_different_location(base_setup,"FRA"),get_different_location(DGX_2H_setup,'FRA'), "changed_location")
+
+to_org_table(multi_index_to_multiline_header(table))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+| model           | base                       | base                             | base                              | changed_density             | changed_density                   | changed_density                    | changed_location            | changed_location                  | changed_location                   |
+|                 | GWP                        | ADP                              | PE                                | GWP                        | ADP                              | PE                                | GWP                        | ADP                              | PE                                |
+|                 | (\COtwo{})                 | (\Sbe{})                         | (MJ)                              | (\COtwo{})                 | (\Sbe{})                         | (MJ)                              | (\COtwo{})                 | (\Sbe{})                         | (MJ)                              |
+|-----------------+----------------------------+----------------------------------+-----------------------------------+----------------------------+----------------------------------+-----------------------------------+----------------------------+----------------------------------+-----------------------------------|
+| Transformer_base | 12.0 [12.0,13.0,31.0]      | 7.9e-05 [5.4e-05,0.00026,0.0039] | 360.0 [360.0,370.0,590.0]         | 12.0 [12.0,13.0,25.0]      | 7.7e-05 [5.2e-05,0.00025,0.0037] | 360.0 [360.0,370.0,520.0]         | 3.5 [3.3,4.3,22.0]         | 7.8e-05 [5.3e-05,0.00026,0.0039] | 360.0 [360.0,370.0,580.0]         |
+| Transformer_big  | 90.0 [89.0,96.0,220.0]     | 0.00056 [0.00038,0.0018,0.027]   | 2700.0 [2700.0,2800.0,4300.0]     | 89.0 [88.0,94.0,180.0]     | 0.00054 [0.00037,0.0018,0.026]   | 2700.0 [2700.0,2800.0,3800.0]     | 26.0 [25.0,32.0,160.0]     | 0.00055 [0.00037,0.0018,0.027]   | 2700.0 [2700.0,2800.0,4300.0]     |
+| BERT_base        | 830.0 [810.0,970.0,3900.0] | 0.0049 [0.0034,0.016,0.24]       | 24000.0 [24000.0,26000.0,61000.0] | 800.0 [790.0,860.0,2100.0] | 0.0039 [0.0027,0.013,0.19]       | 24000.0 [24000.0,25000.0,40000.0] | 260.0 [240.0,410.0,3300.0] | 0.0048 [0.0032,0.016,0.24]       | 24000.0 [24000.0,26000.0,61000.0] |
+| ELMo            | 130.0 [120.0,140.0,440.0]  | 0.0014 [0.00094,0.0047,0.069]    | 3800.0 [3800.0,4000.0,7700.0]     | 130.0 [120.0,140.0,380.0]  | 0.0014 [0.00092,0.0045,0.068]    | 3800.0 [3800.0,3900.0,7000.0]     | 38.0 [36.0,53.0,350.0]     | 0.0014 [0.00093,0.0046,0.069]    | 3800.0 [3700.0,4000.0,7700.0]     |
+:END:
 
 * comparing manufacture impacts with Dell LCAs 
 #+LaTeX:  \label{sec:manufacture_comparison}
@@ -1857,10 +2136,18 @@ impact_dict_boavizta = get_impact_dict_b(output)
   #+end_src
 
   #+RESULTS:
-  : {'impacts': {'gwp': {'manufacture': 2400.0, 'use': 2100.0, 'unit': 'kgCO2eq'}, 'pe': {'manufacture': 31000.0, 'use': 71020.0, 'unit': 'MJ'}, 'adp': {'manufacture': 0.19, 'use': 0.000354, 'unit': 'kgSbeq'}}, 'verbose': {'ASSEMBLY-1': {'units': 1, 'manufacture_impacts': {'gwp': {'value': 6.68, 'unit': 'kgCO2eq'}, 'pe': {'value': 68.6, 'unit': 'MJ'}, 'adp': {'value': 1.41e-06, 'unit': 'kgSbeq'}}}, 'CPU-1': {'units': 2, 'manufacture_impacts': {'gwp': {'value': 21.7, 'unit': 'kgCO2eq'}, 'pe': {'value': 325.0, 'unit': 'MJ'}, 'adp': {'value': 0.02, 'unit': 'kgSbeq'}}, 'core_units': {'value': 24, 'unit': 'none', 'status': 'DEFAULT', 'source': None}, 'die_size_per_core': {'value': 0.245, 'unit': 'mm2', 'status': 'DEFAULT', 'source': None}, 'USAGE': {'usage_impacts': {'gwp': {'value': 610.0, 'unit': 'kgCO2eq'}, 'pe': {'value': 20550.0, 'unit': 'MJ'}, 'adp': {'value': 0.000102, 'unit': 'kgSbeq'}}, 'hours_electrical_consumption': {'value': 182.2302330318905, 'unit': 'W', 'status': 'COMPLETED', 'source': None}, 'time_workload': {'value': 50.0, 'unit': '%', 'status': 'DEFAULT', 'source': None}, 'usage_location': {'value': 'EEE', 'unit': 'CodSP3 - NCS Country Codes - NATO', 'status': 'DEFAULT', 'source': None}, 'adp_factor': {'value': 6.42e-08, 'unit': 'KgSbeq/kWh', 'status': 'COMPLETED', 'source': 'ADEME BASE IMPACT'}, 'gwp_factor': {'value': 0.38, 'unit': 'kgCO2e/kWh', 'status': 'COMPLETED', 'source': 'https://www.sciencedirect.com/science/article/pii/S0306261921012149 : \nAverage of 27 european countries'}, 'pe_factor': {'value': 12.874, 'unit': 'MJ/kWh', 'status': 'COMPLETED', 'source': 'ADPf / (1-%renewable_energy)'}, 'use_time': {'value': 8760, 'unit': 'hours', 'status': 'DEFAULT', 'source': None}, 'params': {'value': {'a': 171.2, 'b': 0.0354, 'c': 36.89, 'd': -10.13}, 'unit': 'none', 'status': 'DEFAULT', 'source': None}}}, 'RAM-1': {'units': 12, 'manufacture_impacts': {'gwp': {'value': 45.0, 'unit': 'kgCO2eq'}, 'pe': {'value': 560.0, 'unit': 'MJ'}, 'adp': {'value': 0.0028, 'unit': 'kgSbeq'}}, 'capacity': {'value': 32, 'unit': 'GB', 'status': 'INPUT', 'source': None}, 'density': {'value': 1.79, 'unit': 'GB/cm2', 'status': 'INPUT', 'source': None}, 'USAGE': {'usage_impacts': {'gwp': {'value': 30.0, 'unit': 'kgCO2eq'}, 'pe': {'value': 1025.0, 'unit': 'MJ'}, 'adp': {'value': 5.11e-06, 'unit': 'kgSbeq'}}, 'hours_electrical_consumption': {'value': 9.088, 'unit': 'W', 'status': 'COMPLETED', 'source': None}, 'time_workload': {'value': 50.0, 'unit': '%', 'status': 'DEFAULT', 'source': None}, 'usage_location': {'value': 'EEE', 'unit': 'CodSP3 - NCS Country Codes - NATO', 'status': 'DEFAULT', 'source': None}, 'adp_factor': {'value': 6.42e-08, 'unit': 'KgSbeq/kWh', 'status': 'COMPLETED', 'source': 'ADEME BASE IMPACT'}, 'gwp_factor': {'value': 0.38, 'unit': 'kgCO2e/kWh', 'status': 'COMPLETED', 'source': 'https://www.sciencedirect.com/science/article/pii/S0306261921012149 : \nAverage of 27 european countries'}, 'pe_factor': {'value': 12.874, 'unit': 'MJ/kWh', 'status': 'COMPLETED', 'source': 'ADPf / (1-%renewable_energy)'}, 'use_time': {'value': 8760, 'unit': 'hours', 'status': 'DEFAULT', 'source': None}, 'params': {'value': {'a': 9.088}, 'unit': 'none', 'status': 'COMPLETED', 'source': '(ram_electrical_factor_per_go : 0.284) * (ram_capacity: 32) '}}}, 'SSD-1': {'units': 1, 'manufacture_impacts': {'gwp': {'value': 24.0, 'unit': 'kgCO2eq'}, 'pe': {'value': 293.0, 'unit': 'MJ'}, 'adp': {'value': 0.0011, 'unit': 'kgSbeq'}}, 'capacity': {'value': 400, 'unit': 'GB', 'status': 'INPUT', 'source': None}, 'density': {'value': 50.6, 'unit': 'GB/cm2', 'status': 'INPUT', 'source': None}}, 'SSD-2': {'units': 8, 'manufacture_impacts': {'gwp': {'value': 180.0, 'unit': 'kgCO2eq'}, 'pe': {'value': 2240.0, 'unit': 'MJ'}, 'adp': {'value': 0.0056, 'unit': 'kgSbeq'}}, 'capacity': {'value': 3840, 'unit': 'GB', 'status': 'INPUT', 'source': None}, 'density': {'value': 48.5, 'unit': 'GB/cm2', 'status': 'DEFAULT', 'source': None}}, 'POWER_SUPPLY-1': {'units': 2, 'manufacture_impacts': {'gwp': {'value': 72.7, 'unit': 'kgCO2eq'}, 'pe': {'value': 1050.0, 'unit': 'MJ'}, 'adp': {'value': 0.025, 'unit': 'kgSbeq'}}, 'unit_weight': {'value': 2.99, 'unit': 'kg', 'status': 'DEFAULT', 'source': None}}, 'CASE-1': {'units': 1, 'manufacture_impacts': {'gwp': {'value': 150.0, 'unit': 'kgCO2eq'}, 'pe': {'value': 2200.0, 'unit': 'MJ'}, 'adp': {'value': 0.0202, 'unit': 'kgSbeq'}}, 'case_type': {'value': 'rack', 'unit': 'none', 'status': 'INPUT', 'source': None}}, 'MOTHERBOARD-1': {'units': 1, 'manufacture_impacts': {'gwp': {'value': 66.1, 'unit': 'kgCO2eq'}, 'pe': {'value': 836.0, 'unit': 'MJ'}, 'adp': {'value': 0.00369, 'unit': 'kgSbeq'}}}, 'USAGE': {'usage_impacts': {'gwp': {'value': 2100.0, 'unit': 'kgCO2eq'}, 'pe': {'value': 71020.0, 'unit': 'MJ'}, 'adp': {'value': 0.000354, 'unit': 'kgSbeq'}}, 'hours_electrical_consumption': {'value': 629.7762799999999, 'unit': 'W', 'status': 'COMPLETED', 'source': None}, 'usage_location': {'value': 'EEE', 'unit': 'CodSP3 - NCS Country Codes - NATO', 'status': 'DEFAULT', 'source': None}, 'adp_factor': {'value': 6.42e-08, 'unit': 'KgSbeq/kWh', 'status': 'COMPLETED', 'source': 'ADEME BASE IMPACT'}, 'gwp_factor': {'value': 0.38, 'unit': 'kgCO2e/kWh', 'status': 'COMPLETED', 'source': 'https://www.sciencedirect.com/science/article/pii/S0306261921012149 : \nAverage of 27 european countries'}, 'pe_factor': {'value': 12.874, 'unit': 'MJ/kWh', 'status': 'COMPLETED', 'source': 'ADPf / (1-%renewable_energy)'}, 'use_time': {'value': 8760, 'unit': 'hours', 'status': 'DEFAULT', 'source': None}, 'other_consumption_ratio': {'value': 0.33, 'unit': 'ratio /1', 'status': 'DEFAULT', 'source': None}}}}
-  : RAM gwp: 540.0 kgCO2eq
-  : SSD gwp: 24.0 kgCO2eq
-  : Other component GWP impacts: 302 kgCO2eq
+  #+begin_example
+  {'impacts': {'gwp': {'embedded': {'value': 2200.0, 'min': 1395.0, 'max': 5523.0, 'warnings': ['End of life is not included in the calculation']}, 'use': {'value': 8000.0, 'min': 281.7, 'max': 53160.0}, 'unit': 'kgCO2eq', 'description': 'Total climate change'}, 'adp': {'embedded': {'value': 0.19, 'min': 0.1071, 'max': 0.3459, 'warnings': ['End of life is not included in the calculation']}, 'use': {'value': 0.001, 'min': 0.0001622, 'max': 0.01248}, 'unit': 'kgSbeq', 'description': 'Use of minerals and fossil ressources'}, 'pe': {'embedded': {'value': 29000.0, 'min': 17840.0, 'max': 69950.0, 'warnings': ['End of life is not included in the calculation']}, 'use': {'value': 300000.0, 'min': 159.2, 'max': 21990000.0, 'warnings': ['Uncertainty from technical characteristics is very important. Results should be interpreted with caution (see min and max values)']}, 'unit': 'MJ', 'description': 'Consumption of primary energy'}}, 'verbose': {'duration': {'value': 35040.0, 'unit': 'hours'}, 'ASSEMBLY-1': {'impacts': {'gwp': {'embedded': {'value': 6.68, 'min': 6.68, 'max': 6.68, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'kgCO2eq', 'description': 'Total climate change'}, 'adp': {'embedded': {'value': 1.41e-06, 'min': 1.41e-06, 'max': 1.41e-06, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'kgSbeq', 'description': 'Use of minerals and fossil ressources'}, 'pe': {'embedded': {'value': 68.6, 'min': 68.6, 'max': 68.6, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'MJ', 'description': 'Consumption of primary energy'}}, 'units': {'value': 1, 'status': 'ARCHETYPE', 'min': 1, 'max': 1}, 'duration': {'value': 35040.0, 'unit': 'hours'}}, 'CPU-1': {'impacts': {'gwp': {'embedded': {'value': 40.0, 'min': 10.92, 'max': 327.3, 'warnings': ['End of life is not included in the calculation']}, 'use': {'value': 5000.0, 'min': 146.9, 'max': 28900.0}, 'unit': 'kgCO2eq', 'description': 'Total climate change'}, 'adp': {'embedded': {'value': 0.041, 'min': 0.0204, 'max': 0.08169, 'warnings': ['End of life is not included in the calculation']}, 'use': {'value': 0.0008, 'min': 8.454e-05, 'max': 0.006783}, 'unit': 'kgSbeq', 'description': 'Use of minerals and fossil ressources'}, 'pe': {'embedded': {'value': 600.0, 'min': 179.9, 'max': 4534.0, 'warnings': ['End of life is not included in the calculation']}, 'use': {'value': 200000.0, 'min': 83.01, 'max': 11960000.0, 'warnings': ['Uncertainty from technical characteristics is very important. Results should be interpreted with caution (see min and max values)']}, 'unit': 'MJ', 'description': 'Consumption of primary energy'}}, 'units': {'value': 2.0, 'status': 'ARCHETYPE', 'min': 1.0, 'max': 4.0}, 'die_size': {'value': 521.0, 'status': 'COMPLETED', 'unit': 'mm2', 'source': 'Average value for all families', 'min': 41.2, 'max': 3640.0}, 'duration': {'value': 35040.0, 'unit': 'hours'}, 'avg_power': {'value': 182.23023303189055, 'status': 'COMPLETED', 'unit': 'W', 'min': 182.23023303189055, 'max': 182.23023303189055, 'warnings': ['value for one cpu unit']}, 'time_workload': {'value': 50.0, 'status': 'ARCHETYPE', 'unit': '%', 'min': 0.0, 'max': 100.0}, 'usage_location': {'value': 'EEE', 'status': 'DEFAULT', 'unit': 'CodSP3 - NCS Country Codes - NATO'}, 'use_time_ratio': {'value': 1.0, 'status': 'ARCHETYPE', 'unit': '/1', 'min': 1.0, 'max': 1.0}, 'hours_life_time': {'value': 35040.0, 'status': 'COMPLETED', 'unit': 'hours', 'source': 'from device', 'min': 35040.0, 'max': 35040.0}, 'params': {'value': {'a': 171.2, 'b': 0.0354, 'c': 36.89, 'd': -10.13}, 'status': 'ARCHETYPE'}, 'gwp_factor': {'value': 0.38, 'status': 'DEFAULT', 'unit': 'kg CO2eq/kWh', 'source': 'https://www.sciencedirect.com/science/article/pii/S0306261921012149', 'min': 0.023, 'max': 1.13161}, 'adp_factor': {'value': 6.42317e-08, 'status': 'DEFAULT', 'unit': 'kg Sbeq/kWh', 'source': 'ADEME Base IMPACTS ®', 'min': 1.324e-08, 'max': 2.65575e-07}, 'pe_factor': {'value': 12.873, 'status': 'DEFAULT', 'unit': 'MJ/kWh', 'source': 'ADPf / (1-%renewable_energy)', 'min': 0.013, 'max': 468.15}}, 'RAM-1': {'impacts': {'gwp': {'embedded': {'value': 534.6, 'min': 534.6, 'max': 534.6, 'warnings': ['End of life is not included in the calculation']}, 'use': {'value': 1500.0, 'min': 87.89, 'max': 4324.0}, 'unit': 'kgCO2eq', 'description': 'Total climate change'}, 'adp': {'embedded': {'value': 0.0338, 'min': 0.0338, 'max': 0.0338, 'warnings': ['End of life is not included in the calculation']}, 'use': {'value': 0.00025, 'min': 5.059e-05, 'max': 0.001015}, 'unit': 'kgSbeq', 'description': 'Use of minerals and fossil ressources'}, 'pe': {'embedded': {'value': 6745.0, 'min': 6745.0, 'max': 6745.0, 'warnings': ['End of life is not included in the calculation']}, 'use': {'value': 50000.0, 'min': 49.68, 'max': 1789000.0, 'warnings': ['Uncertainty from technical characteristics is very important. Results should be interpreted with caution (see min and max values)']}, 'unit': 'MJ', 'description': 'Consumption of primary energy'}}, 'units': {'value': 12, 'status': 'INPUT'}, 'capacity': {'value': 32, 'status': 'INPUT', 'unit': 'GB'}, 'density': {'value': 1.79, 'status': 'INPUT', 'unit': 'GB/cm2'}, 'duration': {'value': 35040.0, 'unit': 'hours'}, 'avg_power': {'value': 9.088, 'status': 'COMPLETED', 'unit': 'W', 'min': 9.088, 'max': 9.088}, 'time_workload': {'value': 50.0, 'status': 'ARCHETYPE', 'unit': '%', 'min': 0.0, 'max': 100.0}, 'usage_location': {'value': 'EEE', 'status': 'DEFAULT', 'unit': 'CodSP3 - NCS Country Codes - NATO'}, 'use_time_ratio': {'value': 1.0, 'status': 'ARCHETYPE', 'unit': '/1', 'min': 1.0, 'max': 1.0}, 'hours_life_time': {'value': 35040.0, 'status': 'COMPLETED', 'unit': 'hours', 'source': 'from device', 'min': 35040.0, 'max': 35040.0}, 'params': {'value': {'a': 9.088}, 'status': 'COMPLETED', 'source': '(ram_electrical_factor_per_go : 0.284) * (ram_capacity: 32) '}, 'gwp_factor': {'value': 0.38, 'status': 'DEFAULT', 'unit': 'kg CO2eq/kWh', 'source': 'https://www.sciencedirect.com/science/article/pii/S0306261921012149', 'min': 0.023, 'max': 1.13161}, 'adp_factor': {'value': 6.42317e-08, 'status': 'DEFAULT', 'unit': 'kg Sbeq/kWh', 'source': 'ADEME Base IMPACTS ®', 'min': 1.324e-08, 'max': 2.65575e-07}, 'pe_factor': {'value': 12.873, 'status': 'DEFAULT', 'unit': 'MJ/kWh', 'source': 'ADPf / (1-%renewable_energy)', 'min': 0.013, 'max': 468.15}}, 'SSD-1': {'impacts': {'gwp': {'embedded': {'value': 23.73, 'min': 23.73, 'max': 23.73, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'kgCO2eq', 'description': 'Total climate change'}, 'adp': {'embedded': {'value': 0.001061, 'min': 0.001061, 'max': 0.001061, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'kgSbeq', 'description': 'Use of minerals and fossil ressources'}, 'pe': {'embedded': {'value': 292.7, 'min': 292.7, 'max': 292.7, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'MJ', 'description': 'Consumption of primary energy'}}, 'units': {'value': 1, 'status': 'INPUT'}, 'capacity': {'value': 400, 'status': 'INPUT', 'unit': 'GB'}, 'density': {'value': 50.6, 'status': 'INPUT', 'unit': 'GB/cm2'}, 'duration': {'value': 35040.0, 'unit': 'hours'}}, 'SSD-2': {'impacts': {'gwp': {'embedded': {'value': 1300.0, 'min': 578.7, 'max': 4172.0, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'kgCO2eq', 'description': 'Total climate change'}, 'adp': {'embedded': {'value': 0.04, 'min': 0.01962, 'max': 0.1225, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'kgSbeq', 'description': 'Use of minerals and fossil ressources'}, 'pe': {'embedded': {'value': 16000.0, 'min': 7167.0, 'max': 51750.0, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'MJ', 'description': 'Consumption of primary energy'}}, 'units': {'value': 8, 'status': 'INPUT'}, 'capacity': {'value': 3840, 'status': 'INPUT', 'unit': 'GB'}, 'density': {'value': 54.8842105263158, 'status': 'COMPLETED', 'unit': 'GB/cm2', 'source': 'Average of 19 rows', 'min': 16.4, 'max': 128.0}, 'duration': {'value': 35040.0, 'unit': 'hours'}}, 'POWER_SUPPLY-1': {'impacts': {'gwp': {'embedded': {'value': 150.0, 'min': 24.3, 'max': 243.0, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'kgCO2eq', 'description': 'Total climate change'}, 'adp': {'embedded': {'value': 0.05, 'min': 0.0083, 'max': 0.083, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'kgSbeq', 'description': 'Use of minerals and fossil ressources'}, 'pe': {'embedded': {'value': 2100.0, 'min': 352.0, 'max': 3520.0, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'MJ', 'description': 'Consumption of primary energy'}}, 'units': {'value': 2.0, 'status': 'ARCHETYPE', 'min': 1.0, 'max': 2.0}, 'unit_weight': {'value': 2.99, 'status': 'ARCHETYPE', 'unit': 'kg', 'min': 1.0, 'max': 5.0}, 'duration': {'value': 35040.0, 'unit': 'hours'}}, 'CASE-1': {'impacts': {'gwp': {'embedded': {'value': 150.0, 'min': 150.0, 'max': 150.0, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'kgCO2eq', 'description': 'Total climate change'}, 'adp': {'embedded': {'value': 0.0202, 'min': 0.0202, 'max': 0.0202, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'kgSbeq', 'description': 'Use of minerals and fossil ressources'}, 'pe': {'embedded': {'value': 2200.0, 'min': 2200.0, 'max': 2200.0, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'MJ', 'description': 'Consumption of primary energy'}}, 'units': {'value': 1, 'status': 'ARCHETYPE', 'min': 1, 'max': 1}, 'case_type': {'value': 'rack', 'status': 'INPUT'}, 'duration': {'value': 35040.0, 'unit': 'hours'}}, 'MOTHERBOARD-1': {'impacts': {'gwp': {'embedded': {'value': 66.1, 'min': 66.1, 'max': 66.1, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'kgCO2eq', 'description': 'Total climate change'}, 'adp': {'embedded': {'value': 0.00369, 'min': 0.00369, 'max': 0.00369, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'kgSbeq', 'description': 'Use of minerals and fossil ressources'}, 'pe': {'embedded': {'value': 836.0, 'min': 836.0, 'max': 836.0, 'warnings': ['End of life is not included in the calculation']}, 'use': 'not implemented', 'unit': 'MJ', 'description': 'Consumption of primary energy'}}, 'units': {'value': 1, 'status': 'ARCHETYPE', 'min': 1, 'max': 1}, 'duration': {'value': 35040.0, 'unit': 'hours'}}, 'avg_power': {'value': 629.7762799999999, 'status': 'COMPLETED', 'unit': 'W', 'min': 349.5431999999999, 'max': 1340.7615999999998}, 'usage_location': {'value': 'EEE', 'status': 'DEFAULT', 'unit': 'CodSP3 - NCS Country Codes - NATO'}, 'use_time_ratio': {'value': 1.0, 'status': 'ARCHETYPE', 'unit': '/1', 'min': 1.0, 'max': 1.0}, 'hours_life_time': {'value': 35040.0, 'status': 'ARCHETYPE', 'unit': 'hours', 'min': 35040.0, 'max': 35040.0}, 'other_consumption_ratio': {'value': 0.33, 'status': 'ARCHETYPE', 'unit': 'ratio /1', 'min': 0.2, 'max': 0.6}, 'gwp_factor': {'value': 0.38, 'status': 'DEFAULT', 'unit': 'kg CO2eq/kWh', 'source': 'https://www.sciencedirect.com/science/article/pii/S0306261921012149', 'min': 0.023, 'max': 1.13161}, 'adp_factor': {'value': 6.42317e-08, 'status': 'DEFAULT', 'unit': 'kg Sbeq/kWh', 'source': 'ADEME Base IMPACTS ®', 'min': 1.324e-08, 'max': 2.65575e-07}, 'pe_factor': {'value': 12.873, 'status': 'DEFAULT', 'unit': 'MJ/kWh', 'source': 'ADPf / (1-%renewable_energy)', 'min': 0.013, 'max': 468.15}, 'units': {'value': 1, 'status': 'ARCHETYPE', 'min': 1, 'max': 1}}}
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+    File "/tmp/babel-dpt1i7/python-K3Ydvn", line 69, in <module>
+      impact_dict_boavizta = get_impact_dict_b(output)
+    File "/tmp/babel-dpt1i7/python-K3Ydvn", line 23, in get_impact_dict_b
+      impact_dict = print_results_components_b(results)
+    File "/tmp/babel-dpt1i7/python-K3Ydvn", line 8, in print_results_components_b
+      impact_dict['TOTAL'] = results['impacts']["gwp"]['manufacture']
+  KeyError: 'manufacture'
+  #+end_example
 
 #+NAME:data-for-R-DellR740
 #+begin_src python :results silent :exports none :session
@@ -2010,21 +2297,21 @@ impact_dict_R6525 = print_results_components(out)
 #+RESULTS:
 #+begin_example
 Europe Scenario
-GWP: {'manufacture': 1200.0, 'use': 2060.0, 'unit': 'kgCO2eq'}
-PE: {'manufacture': 15000.0, 'use': 68600.0, 'unit': 'MJ'}
-ADP: {'manufacture': 0.13, 'use': 0.000342, 'unit': 'kgSbeq'}
-RAM gwp: 416.0 kgCO2eq
+GWP: {'manufacture': 950.0, 'use': 2060.0, 'unit': 'kgCO2eq'}
+PE: {'manufacture': 12000.0, 'use': 68600.0, 'unit': 'MJ'}
+ADP: {'manufacture': 0.12, 'use': 0.000342, 'unit': 'kgSbeq'}
+RAM gwp: 192.0 kgCO2eq
 SSD gwp: 380.0 kgCO2eq
 Other component GWP impacts: 302 kgCO2eq
 US Scenario
-GWP: {'manufacture': 1200.0, 'use': 2870.0, 'unit': 'kgCO2eq'}
-PE: {'manufacture': 15000.0, 'use': 60600.0, 'unit': 'MJ'}
-ADP: {'manufacture': 0.13, 'use': 0.000526, 'unit': 'kgSbeq'}
+GWP: {'manufacture': 950.0, 'use': 2870.0, 'unit': 'kgCO2eq'}
+PE: {'manufacture': 12000.0, 'use': 60600.0, 'unit': 'MJ'}
+ADP: {'manufacture': 0.12, 'use': 0.000526, 'unit': 'kgSbeq'}
 R6525 US Scenario
-GWP: {'manufacture': 1600.0, 'use': 2870.0, 'unit': 'kgCO2eq'}
-PE: {'manufacture': 21000.0, 'use': 60600.0, 'unit': 'MJ'}
-ADP: {'manufacture': 0.17, 'use': 0.000526, 'unit': 'kgSbeq'}
-RAM gwp: 832.0 kgCO2eq
+GWP: {'manufacture': 1100.0, 'use': 2870.0, 'unit': 'kgCO2eq'}
+PE: {'manufacture': 15000.0, 'use': 60600.0, 'unit': 'MJ'}
+ADP: {'manufacture': 0.16, 'use': 0.000526, 'unit': 'kgSbeq'}
+RAM gwp: 384.0 kgCO2eq
 SSD gwp: 380.0 kgCO2eq
 Other component GWP impacts: 302 kgCO2eq
 #+end_example
@@ -2053,7 +2340,7 @@ results about the manufacture impacts of a server.
 #+begin_src python :results silent :exports none :session
 impact_dict_DELL_R6515 = {
 'CPU': .28*145.2,
-'MAINBOARD (excl. CPU)':(1-.28) * 145.2,
+"MAINBOARD (excl. CPU)":(1-.28) * 145.2,
 'RAM':263.7,
 'SSD':854.7,
 'OTHER': 33.6 + 11.2 + 9.3 + 7.9 + 6.7 + 11.9 + 30.9 ,
@@ -2062,7 +2349,7 @@ impact_dict_DELL_R6515 = {
 
 impact_dict_DELL_R6525 = {
 'CPU': .29*277.4,
-'MAINBOARD (excl. CPU)':(1-.29) * 277.4,
+"MAINBOARD (excl. CPU)":(1-.29) * 277.4,
 'RAM':527.4,
 'SSD':854.7,
 'OTHER': 36 + 11.2 + 4.8 + 9.8 + 6.1 + 11.9 + 30.9 ,
@@ -2071,10 +2358,28 @@ impact_dict_DELL_R6525 = {
 #+end_src
 
 
+
 #+NAME:data-for-R-DellR6515
-#+begin_src python :results silent :exports none :session
+#+begin_src python :results value :exports none :session
 [('process', 'component', 'GWP'), None] + [('MLCA', k, v) for k,v in impact_dict_R6515.items()] +  [('DELL', k, v) for k,v in impact_dict_DELL_R6515.items()]
 #+end_src
+
+#+RESULTS: data-for-R-DellR6515
+| process | component             |                GWP |
+|---------+-----------------------+--------------------|
+| MLCA    | TOTAL                 |              950.0 |
+| MLCA    | MAINBOARD (excl. CPU) |               66.1 |
+| MLCA    | CPU                   |               11.0 |
+| MLCA    | RAM                   |              192.0 |
+| MLCA    | SSD                   |              380.0 |
+| MLCA    | OTHER                 |              302.0 |
+| DELL    | CPU                   |             40.656 |
+| DELL    | MAINBOARD (excl. CPU) | 104.54399999999998 |
+| DELL    | RAM                   |              263.7 |
+| DELL    | SSD                   |              854.7 |
+| DELL    | OTHER                 |              111.5 |
+| DELL    | TOTAL                 |             1375.2 |
+
 
 #+begin_src R :results output graphics file :file figures/Dell_R6515.png :exports none :width 800 :height 500 :session *R* :var data=data-for-R-DellR6515
 data %>% get_bar_plot('DELL R6515')

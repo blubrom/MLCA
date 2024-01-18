@@ -1,0 +1,7 @@
+model,base,base,base,changed_density,changed_density,changed_density,changed_location,changed_location,changed_location
+,GWP,ADP,PE,GWP,ADP,PE,GWP,ADP,PE
+,(\COtwo{}),(\Sbe{}),(MJ),(\COtwo{}),(\Sbe{}),(MJ),(\COtwo{}),(\Sbe{}),(MJ)
+Transformer_base,,,,,,,,,
+Transformer_big,,,,,,,,,
+BERT_base,,,,,,,,,
+ELMo,,,,,,,,,

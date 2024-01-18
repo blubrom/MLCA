@@ -161,10 +161,9 @@ class UsageSetup(Usage):
     dynamic_ratio: Optional[float] = None
     minute_use_time: Optional[float] = None
     # default ratio computed from BLOOM analysis data
-    # over a period of a month:
-    # infrastructure mode : 223 kWh
-    # idle mode : 887 kWh
-    # production mode : 1310 kWh
+    # infrastructure mode : 27 kWh
+    # idle mode : 64 kWh
+    # production mode : 109 kWh
     _DEFAULT_DYNAMIC_RATIO = 200/109
     _DEFAULT_YEAR_USE_TIME = 0
 

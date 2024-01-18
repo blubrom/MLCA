@@ -1,0 +1,8 @@
+model,base,base,base,base,base,base,base,base,base,base,base,base,changed_density,changed_density,changed_density,changed_density,changed_density,changed_density,changed_density,changed_density,changed_density,changed_density,changed_density,changed_density,changed_location,changed_location,changed_location,changed_location,changed_location,changed_location,changed_location,changed_location,changed_location,changed_location,changed_location,changed_location
+,GWP,GWP,GWP,GWP,ADP,ADP,ADP,ADP,PE,PE,PE,PE,GWP,GWP,GWP,GWP,ADP,ADP,ADP,ADP,PE,PE,PE,PE,GWP,GWP,GWP,GWP,ADP,ADP,ADP,ADP,PE,PE,PE,PE
+,base,min,facebook,max,base,min,facebook,max,base,min,facebook,max,base,min,facebook,max,base,min,facebook,max,base,min,facebook,max,base,min,facebook,max,base,min,facebook,max,base,min,facebook,max
+,(\COtwo{}),(\COtwo{}),(\COtwo{}),(\COtwo{}),(\Sbe{}),(\Sbe{}),(\Sbe{}),(\Sbe{}),(MJ),(MJ),(MJ),(MJ),(\COtwo{}),(\COtwo{}),(\COtwo{}),(\COtwo{}),(\Sbe{}),(\Sbe{}),(\Sbe{}),(\Sbe{}),(MJ),(MJ),(MJ),(MJ),(\COtwo{}),(\COtwo{}),(\COtwo{}),(\COtwo{}),(\Sbe{}),(\Sbe{}),(\Sbe{}),(\Sbe{}),(MJ),(MJ),(MJ),(MJ)
+Transformer_base,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Transformer_big,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+BERT_base,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+ELMo,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

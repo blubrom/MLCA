@@ -1,0 +1,29 @@
+{
+  "model":
+  {
+    "manufacturer": "NVIDIA",
+    "name": "DGX-2H",
+    "type": "rack",
+    "year": 2018
+  },
+  "configuration":
+  {
+    "cpu":
+    {
+	"units": 2,
+	"model": "Xeon Platinum 8174"
+    },
+    "ram":
+    [
+      {
+        "units": 24,
+        "capacity": 64
+      }
+    ],
+
+    "power_supply":
+    {
+      "units": 2
+    }
+  }
+}

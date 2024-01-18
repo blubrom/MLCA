@@ -43,8 +43,7 @@ def cpu_info(a):
 
 
 def get_tuples():
-    page = requests.get(
-        base + '/cpu-specs/?mobile=No&sort=name')
+    page = requests.get(base + '/cpu-specs/?mobile=No&sort=name')
 
     soup = BeautifulSoup(page.content, 'html.parser')
 
@@ -73,7 +72,45 @@ def get_cpus():
 
 # get_cpus()
 
-tuples = get_tuples()
-dicts = [{'model': name, 'TDP': TDP, 'core_units': core_units, 'manufacturer': manufacturer, 'family': family, 'manufacture_date': date,
+# tuples = get_tuples()
+# dicts = [{'model': name, 'TDP': TDP, 'core_units': core_units, 'manufacturer': manufacturer, 'family': family, 'manufacture_date': date,
           'process': process, 'die_size': -1, 'source': link} for (link, name, manufacturer, family, core_units, process, TDP, date) in tuples]
-write_csv('boaviztapi/data/components/cpu_infos.csv', dicts)
+# write_csv('boaviztapi/data/components/cpu_infos.csv', dicts)
+
+
+def gpu_infos(link):
+    page = requests.get(link)
+    soup = BeautifulSoup(page.content, 'html.parser')
+    content = soup.body.find(class_="page").find(class_="contnt")
+
+    model= content.find(class_="gpudb-name").string
+
+    content = content.find(class_="sectioncontainer")
+    
+
+    gpu = content.find 
+    architecture=
+    foundry=
+    process=
+    die_area=
+    year=
+    bus=
+    memory_size=
+    memory_type=
+    length=
+    width=
+    slot_width= #pour savoir si c'est du PCIe ou du SMX Module
+    board_number=
+    
+
+def get_gpus():
+    dicts = []
+    try:
+        for year in range(2013,2024):
+            page = requests.get(base + '/gpu-specs/?mfgr=NVIDIA&' + string(year) + '&mobile=No&workstation=Yes&sort=name')
+            soup = BeautifulSoup(page.content, 'html.parser')
+            # get all links to the GPUs in the table
+            links = soup.body.find(class_="page").find(id="list").table.find_all("a")
+            for link in links:
+                gpu_infos(base + link['href'])
+    except Exception:

@@ -7,6 +7,8 @@ import copy
 
 def verbose_setup(complete_setup: MLSetup, input_setup: MLSetup):
     json_output = {}
+    complete_setup = copy.deepcopy(complete_setup)
+    complete_setup.usage.dynamic_ratio = 1
     usage_gpus = copy.deepcopy(complete_setup.usage)
     usage_gpus.hours_electrical_consumption = complete_setup.gpu_usage * \
         sum(g.power_draw()[0] for g in complete_setup.gpus) / 1000

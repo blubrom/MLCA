@@ -190,7 +190,8 @@ class ComponentRAM(Component):
     }
 
     _DEFAULT_RAM_CAPACITY = 32
-    _DEFAULT_RAM_DENSITY = 0.625
+    _DEFAULT_RAM_DENSITY = .625
+    # _DEFAULT_RAM_DENSITY = 1.8762
 
     # value taken from
     # Lannelongue, L., Grealey, J., Inouye, M., Green Algorithms: Quantifying the Carbon Footprint of Computation.
@@ -249,7 +250,7 @@ class ComponentRAM(Component):
             return
         else:
             sub = self.filter_ram_df()
-            if len(sub) == 0 or len(sub) == len(_cpu_df):
+            if len(sub) == 0 or len(sub) == len(_ram_df):
                 self.capacity = self.capacity if self.capacity else self._DEFAULT_RAM_CAPACITY
                 self.density = self._DEFAULT_RAM_DENSITY
 
@@ -601,6 +602,7 @@ class ComponentGPU(Component):
     architecture: Optional[str] = None
     tdp: Optional[int] = None
     memory_size: Optional[int] = None
+    memory_density: Optional[float] = None
     memory: Optional[ComponentRAM] = None
 
     def impact_gwp(self) -> (float, int):
@@ -671,4 +673,6 @@ class ComponentGPU(Component):
         # then,
         self.memory = ComponentRAM()
         self.memory.capacity = self.memory_size
+        if self.memory_density:
+        	self.memory.density = self.memory_density
         self.memory.smart_complete_data()

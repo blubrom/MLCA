@@ -1,0 +1,170 @@
+% Created 2024-01-18 jeu. 14:57
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\author{Clément Morand}
+\date{\today}
+\title{New exepriments with finer accounting of the servers used}
+\hypersetup{
+ pdfauthor={Clément Morand},
+ pdftitle={New exepriments with finer accounting of the servers used},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 26.3 (Org mode 9.1.9)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+As it is really complex to find data regarding the hardware used in
+TPUs, the experiments done with google's TPU will not be included
+
+for the ELMo and Transformer case, the papers do not detail the
+hardware. Just the graphics cards used are indicated in Caswani et. al
+for the transformer models. 
+
+For the memory use and CPU used for these two models:
+\begin{itemize}
+\item According to \href{https://docs.deeppavlov.ai/en/0.9.0/apiref/models/elmo.html}{this blogpost}, 32GB memory are required to train ELmo
+\item According to \href{https://www.trentonbricken.com/TransformerMemoryRequirements/}{this blogpost}, 32GB memory should also work to train a
+Transformer with 35M parameters
+\item for the CPU, a CPU used in servers from the same period will be
+used, specificaly, the CPU used in the Nvidia DGX-2H server, that
+was used to train BERT in the experiments described in the Strubell
+\textbf{et al.} paper: 2 Intel Xeon Platinum 8174
+\end{itemize}
+
+For the GPU usage factor, in order to not overestimate too much, a
+value will be computed from the total consumption estimated by
+Strubell and colleagues (supposing that the vast majority of
+consumption comes from the GPU, the power consumption indicatged in
+the paper are entirely attributed to the GPU).
+
+For the remaining hardware, we will use the default values of MLCA.
+
+\section{sensitivity}
+\label{sec:org15e5b69}
+
+To test the sensitivity of the results on the different parameters,
+changes to the density of memory, lifespan of servers and usage ratio
+will be tested. For the lifespan and usage ratio, we will produce an
+uncertainty interval, as we suppose that these parameters are easily
+bounded.
+We suppose that no servers have a mean lifespan of less than 1 year
+and no more than 8 years, and suppose that the servers never have a
+usage ratio of less than 10\% and never have a higher ratio than 95\%.
+
+Results will therefore be compared when using the default value and
+the values producting the highest (lowest lifespan and usage) and lowest
+(highest lifespan and usage) impacts.
+
+For the sensitivity to changes in the estimated memory density, we wil
+test to scenarios, one when using the default value and another one
+when using the density used in \cite{Pirson2023iot} for instance (or
+one of the values from \cite{Groger2021green}) 
+
+Sensitivity to changes in location will be explored trough two
+different scenarios, one in France and one in the USA.
+
+\section{approximating the GPU usage factor}
+\label{sec:org45a92e0}
+
+Using the ratio of average measured power consumption to total TDP, we
+can deduce an approximation of the GPU usage factor (assuming that the
+vast majority of power draw comes from the GPUs)
+
+\begin{center}
+\begin{tabular}{lrr}
+model & estimated & measured\\
+\hline
+Transformer\(_{\text{base}}\) & 2000 & 1415.78\\
+Transformer\(_{\text{big}}\) & 2000 & 1515.43\\
+ELMo & 750 & 517.66\\
+BERT\(_{\text{base}}\) & 16000 & 12041.51\\
+\end{tabular}
+\end{center}
+
+\begin{verbatim}
+usage_dict = {
+'Transformer_base': 1415.78/2000, 'Transformer_big': 1515.43/2000,'ELMo': 517.66/750, 'BERT_base': 12041.51/16000
+}
+\end{verbatim}
+
+\begin{verbatim}
+return [('model', 'estimated GPU usage'),None,('Transformer_base', 1415.78/2000), ('Transformer_big', 1515.43/2000),('ELMo', 517.66/750),('BERT_base',12041.51/16000)]
+\end{verbatim}
+
+\begin{center}
+\begin{tabular}{lr}
+model & estimated GPU usage\\
+\hline
+Transformer\(_{\text{base}}\) & 0.70789\\
+Transformer\(_{\text{big}}\) & 0.757715\\
+ELMo & 0.6902133333333333\\
+BERT\(_{\text{base}}\) & 0.752594375\\
+\end{tabular}
+\end{center}
+
+\section{experiments setup}
+\label{sec:orge64568a}
+
+define the setup that will be used to run Transformer and ELMo
+experiments.   
+
+For Bert, it is stated in the paper that the estimates where run on
+Nvidia 4 DGX-2H servers whose specifications are available at \href{https://www.nvidia.com/content/dam/en-zz/es\_em/Solutions/Data-Center/dgx-2/dgx-2h-datasheet-us-nvidia-841283-r6-web.pdf}{this
+website}, each server comprising 2 Intel Xeon Platinum 8174 CPU, 2*
+960GB NVME SSDs, 1.5TB memory 
+
+create the different models for the different sensitivity analyses
+
+define functions to run the estimates
+
+\section{running the estimates}
+\label{sec:org77a8428}
+
+\begin{verbatim}
+table = pd.read_csv('expected/training_strubell_new.csv', sep=',', header=[0,1,2])
+
+rename_multi_index(table, ('model', 'Unnamed: 0_level_1', 'Unnamed: 0_level_2'), ('model', '',''))
+
+def set(model, col, val):
+    table.loc[table[('model', '','')] == model, col] = val
+
+
+print("estimates base parameters")
+estimates(base_setup,DGX_2H_setup, "base")
+print("\n\nestimates changed density")
+estimates(get_different_density(base_setup,1.875),get_different_density(DGX_2H_setup,1.875), "changed_density")
+print("\n\nestimates changed location")
+estimates(get_different_location(base_setup,"FRA"),get_different_location(DGX_2H_setup,'FRA'), "changed_location")
+
+to_org_table(multi_index_to_multiline_header(table))
+\end{verbatim}
+
+\begin{center}
+\begin{tabular}{llllllllll}
+model & base & base & base & changed\(_{\text{density}}\) & changed\(_{\text{density}}\) & changed\(_{\text{density}}\) & changed\(_{\text{location}}\) & changed\(_{\text{location}}\) & changed\(_{\text{location}}\)\\
+ & GWP & ADP & PE & GWP & ADP & PE & GWP & ADP & PE\\
+ & (\COtwo{}) & (\Sbe{}) & (MJ) & (\COtwo{}) & (\Sbe{}) & (MJ) & (\COtwo{}) & (\Sbe{}) & (MJ)\\
+\hline
+Transformer\(_{\text{base}}\) & 12.0 [12.0,31.0] & 7.9e-05 [5.4e-05,0.0039] & 360.0 [360.0,590.0] & 12.0 [12.0,25.0] & 7.7e-05 [5.2e-05,0.0037] & 360.0 [360.0,520.0] & 3.5 [3.3,22.0] & 7.8e-05 [5.3e-05,0.0039] & 360.0 [360.0,580.0]\\
+Transformer\(_{\text{big}}\) & 90.0 [89.0,220.0] & 0.00056 [0.00038,0.027] & 2700.0 [2700.0,4300.0] & 89.0 [88.0,180.0] & 0.00054 [0.00037,0.026] & 2700.0 [2700.0,3800.0] & 26.0 [25.0,160.0] & 0.00055 [0.00037,0.027] & 2700.0 [2700.0,4300.0]\\
+BERT\(_{\text{base}}\) & 830.0 [810.0,3900.0] & 0.0049 [0.0034,0.24] & 24000.0 [24000.0,62000.0] & 800.0 [790.0,2100.0] & 0.0039 [0.0027,0.19] & 24000.0 [24000.0,40000.0] & 260.0 [240.0,3300.0] & 0.0048 [0.0033,0.24] & 24000.0 [24000.0,62000.0]\\
+ELMo & 130.0 [120.0,440.0] & 0.0014 [0.00094,0.069] & 3800.0 [3800.0,7700.0] & 130.0 [120.0,380.0] & 0.0014 [0.00092,0.068] & 3800.0 [3800.0,7000.0] & 38.0 [36.0,350.0] & 0.0014 [0.00093,0.069] & 3800.0 [3700.0,7700.0]\\
+\end{tabular}
+\end{center}
+\end{document}
