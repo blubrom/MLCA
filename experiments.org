@@ -78,6 +78,7 @@ import subprocess
 from datetime import datetime
 import matplotlib.pyplot as plt
 import tabulate
+import re
   #+end_src
 
   #+RESULTS:
@@ -1897,9 +1898,18 @@ def estimate(model, task,  name, gpu, nb_gpus, time):
     gwp_min,adp_min,pe_min = get_results(output_min) 
     gwp_max,adp_max,pe_max = get_results(output_max)
    
-    set(name, (task, 'GWP', '(\COtwo{})'), f'{gwp} [{gwp_min},{gwp_facebook},{gwp_max}]')
-    set(name, (task, 'ADP', '(\Sbe{})'), f'{adp} [{adp_min},{adp_facebook},{adp_max}]')
-    set(name, (task, 'PE', '(MJ)'), f'{pe} [{pe_min},{pe_facebook},{pe_max}]')    
+    set(name, (task, 'GWP', 'base','(\COtwo{})'), gwp)
+    set(name, (task, 'GWP', 'min','(\COtwo{})'), gwp_min)
+    set(name, (task, 'GWP', 'facebook','(\COtwo{})'), gwp_facebook)
+    set(name, (task, 'GWP', 'max','(\COtwo{})'), gwp_max)
+    set(name, (task, 'ADP', 'base','(\Sbe{})'),adp) 
+    set(name, (task, 'ADP', 'min','(\Sbe{})'),adp_min) 
+    set(name, (task, 'ADP', 'facebook','(\Sbe{})'),adp_facebook) 
+    set(name, (task, 'ADP','max' ,'(\Sbe{})'),adp_max) 
+    set(name, (task, 'PE', 'base','(MJ)'), pe)   
+    set(name, (task, 'PE', 'min','(MJ)'), pe_min)      
+    set(name, (task, 'PE', 'facebook','(MJ)'), pe_facebook)  
+    set(name, (task, 'PE', 'max','(MJ)'), pe_max)  
 
 def estimates(model_base, model_BERT, task):
     estimate(model_base, task, "Transformer_base", 'NVIDIA Tesla P100 PCIe 16 GB', 8, 12)
@@ -1938,35 +1948,119 @@ different scenarios, one in France and one in the USA.
 *** running the estimates
 
 #+begin_src python : post attr_wrap(caption="Comparison of the presented measures with our estimates", data=*this*) :results drawer :session :exports results
-table = pd.read_csv('expected/training_strubell_new.csv', sep=',', header=[0,1,2])
+table = pd.read_csv('expected/training_strubell_new.csv', sep=',', header=[0,1,2,3])
 
-rename_multi_index(table, ('model', 'Unnamed: 0_level_1', 'Unnamed: 0_level_2'), ('model', '',''))
+rename_multi_index(table, ('model', 'Unnamed: 0_level_1', 'Unnamed: 0_level_2', 'Unnamed: 0_level_3'), ('model', '','',''))
 
 def set(model, col, val):
-    table.loc[table[('model', '','')] == model, col] = val
+    table.loc[table[('model', '','','')] == model, col] = val
 
 
 print("estimates base parameters")
 estimates(base_setup,DGX_2H_setup, "base")
 print("\n\nestimates changed density")
-estimates(get_different_density(base_setup,1.875),get_different_density(DGX_2H_setup,1.875), "changed_density")
+estimates(get_different_density(base_setup,1.875),get_different_density(DGX_2H_setup,1.875), "changedDensity")
 print("\n\nestimates changed location")
-estimates(get_different_location(base_setup,"FRA"),get_different_location(DGX_2H_setup,'FRA'), "changed_location")
+estimates(get_different_location(base_setup,"FRA"),get_different_location(DGX_2H_setup,'FRA'), "changedLocation")
 
+table.to_csv('results/training_strubell_results.csv', sep=',', header=True, index=False)
 to_org_table(multi_index_to_multiline_header(table))
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-| model           | base                       | base                             | base                              | changed_density             | changed_density                   | changed_density                    | changed_location            | changed_location                  | changed_location                   |
-|                 | GWP                        | ADP                              | PE                                | GWP                        | ADP                              | PE                                | GWP                        | ADP                              | PE                                |
-|                 | (\COtwo{})                 | (\Sbe{})                         | (MJ)                              | (\COtwo{})                 | (\Sbe{})                         | (MJ)                              | (\COtwo{})                 | (\Sbe{})                         | (MJ)                              |
-|-----------------+----------------------------+----------------------------------+-----------------------------------+----------------------------+----------------------------------+-----------------------------------+----------------------------+----------------------------------+-----------------------------------|
-| Transformer_base | 12.0 [12.0,13.0,31.0]      | 7.9e-05 [5.4e-05,0.00026,0.0039] | 360.0 [360.0,370.0,590.0]         | 12.0 [12.0,13.0,25.0]      | 7.7e-05 [5.2e-05,0.00025,0.0037] | 360.0 [360.0,370.0,520.0]         | 3.5 [3.3,4.3,22.0]         | 7.8e-05 [5.3e-05,0.00026,0.0039] | 360.0 [360.0,370.0,580.0]         |
-| Transformer_big  | 90.0 [89.0,96.0,220.0]     | 0.00056 [0.00038,0.0018,0.027]   | 2700.0 [2700.0,2800.0,4300.0]     | 89.0 [88.0,94.0,180.0]     | 0.00054 [0.00037,0.0018,0.026]   | 2700.0 [2700.0,2800.0,3800.0]     | 26.0 [25.0,32.0,160.0]     | 0.00055 [0.00037,0.0018,0.027]   | 2700.0 [2700.0,2800.0,4300.0]     |
-| BERT_base        | 830.0 [810.0,970.0,3900.0] | 0.0049 [0.0034,0.016,0.24]       | 24000.0 [24000.0,26000.0,61000.0] | 800.0 [790.0,860.0,2100.0] | 0.0039 [0.0027,0.013,0.19]       | 24000.0 [24000.0,25000.0,40000.0] | 260.0 [240.0,410.0,3300.0] | 0.0048 [0.0032,0.016,0.24]       | 24000.0 [24000.0,26000.0,61000.0] |
-| ELMo            | 130.0 [120.0,140.0,440.0]  | 0.0014 [0.00094,0.0047,0.069]    | 3800.0 [3800.0,4000.0,7700.0]     | 130.0 [120.0,140.0,380.0]  | 0.0014 [0.00092,0.0045,0.068]    | 3800.0 [3800.0,3900.0,7000.0]     | 38.0 [36.0,53.0,350.0]     | 0.0014 [0.00093,0.0046,0.069]    | 3800.0 [3700.0,4000.0,7700.0]     |
+| model           |       base |       base |       base |       base |     base |     base |     base |     base |  base |  base |     base |  base | changedDensity | changedDensity | changedDensity | changedDensity | changedDensity | changedDensity | changedDensity | changedDensity | changedDensity | changedDensity | changedDensity | changedDensity | changedLocation | changedLocation | changedLocation | changedLocation | changedLocation | changedLocation | changedLocation | changedLocation | changedLocation | changedLocation | changedLocation | changedLocation |
+|                 |        GWP |        GWP |        GWP |        GWP |      ADP |      ADP |      ADP |      ADP |    PE |    PE |       PE |    PE |            GWP |            GWP |            GWP |            GWP |            ADP |            ADP |            ADP |            ADP |             PE |             PE |             PE |             PE |             GWP |             GWP |             GWP |             GWP |             ADP |             ADP |             ADP |             ADP |              PE |              PE |              PE |              PE |
+|                 |       base |        min |   facebook |        max |     base |      min | facebook |      max |  base |   min | facebook |   max |           base |            min |       facebook |            max |           base |            min |       facebook |            max |           base |            min |       facebook |            max |            base |             min |        facebook |             max |            base |             min |        facebook |             max |            base |             min |        facebook |             max |
+|                 | (\COtwo{}) | (\COtwo{}) | (\COtwo{}) | (\COtwo{}) | (\Sbe{}) | (\Sbe{}) | (\Sbe{}) | (\Sbe{}) |  (MJ) |  (MJ) |     (MJ) |  (MJ) |     (\COtwo{}) |     (\COtwo{}) |     (\COtwo{}) |     (\COtwo{}) |       (\Sbe{}) |       (\Sbe{}) |       (\Sbe{}) |       (\Sbe{}) |           (MJ) |           (MJ) |           (MJ) |           (MJ) |      (\COtwo{}) |      (\COtwo{}) |      (\COtwo{}) |      (\COtwo{}) |        (\Sbe{}) |        (\Sbe{}) |        (\Sbe{}) |        (\Sbe{}) |            (MJ) |            (MJ) |            (MJ) |            (MJ) |
+|-----------------+------------+------------+------------+------------+----------+----------+----------+----------+-------+-------+----------+-------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------|
+| Transformer_base |         12 |         12 |         13 |         31 |  7.9e-05 |  5.4e-05 |  0.00026 |   0.0039 |   360 |   360 |      370 |   590 |             12 |             12 |             13 |             25 |        7.7e-05 |        5.2e-05 |        0.00025 |         0.0037 |            360 |            360 |            370 |            520 |             3.5 |             3.3 |             4.3 |              22 |         7.8e-05 |         5.3e-05 |         0.00026 |          0.0039 |             360 |             360 |             370 |             580 |
+| Transformer_big  |         90 |         89 |         96 |        220 |  0.00056 |  0.00038 |   0.0018 |    0.027 |  2700 |  2700 |     2800 |  4300 |             89 |             88 |             94 |            180 |        0.00054 |        0.00037 |         0.0018 |          0.026 |           2700 |           2700 |           2800 |           3800 |              26 |              25 |              32 |             160 |         0.00055 |         0.00037 |          0.0018 |           0.027 |            2700 |            2700 |            2800 |            4300 |
+| BERT_base        |        830 |        810 |        970 |       3900 |   0.0049 |   0.0034 |    0.016 |     0.24 | 24000 | 24000 |    26000 | 61000 |            800 |            790 |            860 |           2100 |         0.0039 |         0.0027 |          0.013 |           0.19 |          24000 |          24000 |          25000 |          40000 |             260 |             240 |             410 |            3300 |          0.0048 |          0.0032 |           0.016 |            0.24 |           24000 |           24000 |           26000 |           61000 |
+| ELMo            |        130 |        120 |        140 |        440 |   0.0014 |  0.00094 |   0.0047 |    0.069 |  3800 |  3800 |     4000 |  7700 |            130 |            120 |            140 |            380 |         0.0014 |        0.00092 |         0.0045 |          0.068 |           3800 |           3800 |           3900 |           7000 |              38 |              36 |              53 |             350 |          0.0014 |         0.00093 |          0.0046 |           0.069 |            3800 |            3700 |            4000 |            7700 |
 :END:
+
+create a separate file for each indicator and each scenario
+#+begin_src python :results output :session :exports both
+table = pd.read_csv('results/training_strubell_results.csv', sep=',', header=[0,1,2,3])
+
+rename_multi_index(table, ('model', 'Unnamed: 0_level_1', 'Unnamed: 0_level_2', 'Unnamed: 0_level_3'), ('model', '','',''))
+
+table.set_index(('model','','',''),inplace=True)
+
+
+for scenario in ['base','changedDensity','changedLocation']:
+    for metric in ['GWP','ADP','PE']:
+        new_table = copy.deepcopy(table[(scenario,metric)])
+        new_table.columns = [a for (a,b) in new_table.columns.values]
+        new_table.index.name = 'model'
+        new_table.rename(index = (lambda x : re.sub('(.+)_(.+)', '\g<1>\\\\textsubscript{\g<2>}', x)), inplace=True)
+        # change columns to obtain relative change because this is how error bars are computed in pgfplots
+        new_table['min'] = new_table['base'] - new_table['min']
+        new_table['max'] = new_table['max'] - new_table['base']
+        # re-order rows to have the legend in the future figure not overlap the datapoints
+        new_table.sort_index(inplace=True)
+        # print(new_table)
+        new_table.to_csv('results/Strubell2019energy/' + scenario + metric + '.csv')
+#+end_src
+
+#+RESULTS:
+#+begin_example
+base   min  facebook     max
+model                                                         
+BERT\textsubscript{base}         830.0  20.0     970.0  3070.0
+ELMo                             130.0  10.0     140.0   310.0
+Transformer\textsubscript{base}   12.0   0.0      13.0    19.0
+Transformer\textsubscript{big}    90.0   1.0      96.0   130.0
+                                     base       min  facebook       max
+model                                                                  
+BERT\textsubscript{base}         0.004900  0.001500   0.01600  0.235100
+ELMo                             0.001400  0.000460   0.00470  0.067600
+Transformer\textsubscript{base}  0.000079  0.000025   0.00026  0.003821
+Transformer\textsubscript{big}   0.000560  0.000180   0.00180  0.026440
+                                    base  min  facebook      max
+model                                                           
+BERT\textsubscript{base}         24000.0  0.0   26000.0  37000.0
+ELMo                              3800.0  0.0    4000.0   3900.0
+Transformer\textsubscript{base}    360.0  0.0     370.0    230.0
+Transformer\textsubscript{big}    2700.0  0.0    2800.0   1600.0
+                                  base   min  facebook     max
+model                                                         
+BERT\textsubscript{base}         800.0  10.0     860.0  1300.0
+ELMo                             130.0  10.0     140.0   250.0
+Transformer\textsubscript{base}   12.0   0.0      13.0    13.0
+Transformer\textsubscript{big}    89.0   1.0      94.0    91.0
+                                     base       min  facebook       max
+model                                                                  
+BERT\textsubscript{base}         0.003900  0.001200   0.01300  0.186100
+ELMo                             0.001400  0.000480   0.00450  0.066600
+Transformer\textsubscript{base}  0.000077  0.000025   0.00025  0.003623
+Transformer\textsubscript{big}   0.000540  0.000170   0.00180  0.025460
+                                    base  min  facebook      max
+model                                                           
+BERT\textsubscript{base}         24000.0  0.0   25000.0  16000.0
+ELMo                              3800.0  0.0    3900.0   3200.0
+Transformer\textsubscript{base}    360.0  0.0     370.0    160.0
+Transformer\textsubscript{big}    2700.0  0.0    2800.0   1100.0
+                                  base   min  facebook     max
+model                                                         
+BERT\textsubscript{base}         260.0  20.0     410.0  3040.0
+ELMo                              38.0   2.0      53.0   312.0
+Transformer\textsubscript{base}    3.5   0.2       4.3    18.5
+Transformer\textsubscript{big}    26.0   1.0      32.0   134.0
+                                     base       min  facebook       max
+model                                                                  
+BERT\textsubscript{base}         0.004800  0.001600   0.01600  0.235200
+ELMo                             0.001400  0.000470   0.00460  0.067600
+Transformer\textsubscript{base}  0.000078  0.000025   0.00026  0.003822
+Transformer\textsubscript{big}   0.000550  0.000180   0.00180  0.026450
+                                    base    min  facebook      max
+model                                                             
+BERT\textsubscript{base}         24000.0    0.0   26000.0  37000.0
+ELMo                              3800.0  100.0    4000.0   3900.0
+Transformer\textsubscript{base}    360.0    0.0     370.0    220.0
+Transformer\textsubscript{big}    2700.0    0.0    2800.0   1600.0
+#+end_example
 
 * comparing manufacture impacts with Dell LCAs 
 #+LaTeX:  \label{sec:manufacture_comparison}

@@ -1,0 +1,5 @@
+model,base,min,facebook,max
+BERT\textsubscript{base},260.0,20.0,410.0,3040.0
+ELMo,38.0,2.0,53.0,312.0
+Transformer\textsubscript{base},3.5,0.20000000000000018,4.3,18.5
+Transformer\textsubscript{big},26.0,1.0,32.0,134.0
