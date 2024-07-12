@@ -601,7 +601,7 @@ class ComponentGPU(Component):
     model: Optional[str] = None
     architecture: Optional[str] = None
     tdp: Optional[int] = None
-    memory_size: Optional[int] = None
+    memory_size: Optional[float] = None
     memory_density: Optional[float] = None
     memory: Optional[ComponentRAM] = None
 
