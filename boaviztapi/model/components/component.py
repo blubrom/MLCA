@@ -608,25 +608,25 @@ class ComponentGPU(Component):
     def impact_gwp(self) -> (float, int):
         gpu_die_impact = self._IMPACT_FACTOR_DICT['gwp']['die_impact']
         gpu_impact = self._IMPACT_FACTOR_DICT['gwp']['impact']
-        memory_impact, sig_mem = self.memory.impact_gwp()
+        memory_impact, sig_mem = self.memory.impact_gwp() if self.memory_size > 0 else (0,3)
         significant_figures = min(rd.min_significant_figures(
-            self.die_size, gpu_die_impact, gpu_impact), sig_mem)
+            self.die_size, gpu_die_impact, gpu_impact), sig_mem) 
         return self.die_size * gpu_die_impact + gpu_impact + memory_impact, significant_figures
 
     def impact_pe(self) -> (float, int):
         gpu_die_impact = self._IMPACT_FACTOR_DICT['pe']['die_impact']
         gpu_impact = self._IMPACT_FACTOR_DICT['pe']['impact']
-        memory_impact, sig_mem = self.memory.impact_pe()
+        memory_impact, sig_mem = self.memory.impact_pe() if self.memory_size > 0 else (0,3)
         significant_figures = min(rd.min_significant_figures(
-            self.die_size, gpu_die_impact, gpu_impact), sig_mem)
+            self.die_size, gpu_die_impact, gpu_impact), sig_mem) 
         return self.die_size * gpu_die_impact + gpu_impact + memory_impact, significant_figures
 
     def impact_adp(self) -> (float, int):
         gpu_die_impact = self._IMPACT_FACTOR_DICT['adp']['die_impact']
         gpu_impact = self._IMPACT_FACTOR_DICT['adp']['impact']
-        memory_impact, sig_mem = self.memory.impact_adp()
+        memory_impact, sig_mem = self.memory.impact_adp() if self.memory_size > 0 else (0,3)
         significant_figures = min(rd.min_significant_figures(
-            self.die_size, gpu_die_impact, gpu_impact), sig_mem)
+            self.die_size, gpu_die_impact, gpu_impact), sig_mem) 
         return self.die_size * gpu_die_impact + gpu_impact + memory_impact, significant_figures
 
     def power_draw(self) -> (float, int):
@@ -652,7 +652,7 @@ class ComponentGPU(Component):
 
     def smart_complete_data(self):
         # first complete infos about the TDP, the die size and the memory size
-        if not (self.tdp and self.die_size and self.memory_size):
+        if not (self.tdp and self.die_size and (pd.notnull(self.memory_size))):
             sub = self.filter_gpu_df()
 
             if len(sub) == 0 or len(sub) == len(_gpu_df):
