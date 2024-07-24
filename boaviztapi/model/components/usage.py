@@ -159,6 +159,8 @@ class UsageCloud(UsageServer):
 class UsageSetup(Usage):
 
     dynamic_ratio: Optional[float] = None
+    # To use a percentage of the electricity mix intensity
+    intensity_ratio: Optional[float] = None
     minute_use_time: Optional[float] = None
     # default ratio computed from BLOOM analysis data
     # infrastructure mode : 27 kWh
@@ -166,6 +168,7 @@ class UsageSetup(Usage):
     # production mode : 109 kWh
     _DEFAULT_DYNAMIC_RATIO = 200/109
     _DEFAULT_YEAR_USE_TIME = 0
+    _DEFAULT_INTENSITY_RATIO = 1
 
     dynamic_impact_gwp: Optional[float] = None
     dynamic_impact_adp: Optional[float] = None
@@ -174,22 +177,24 @@ class UsageSetup(Usage):
     def impact_gwp(self) -> (float, int):
         i, s = super().impact_gwp()
         self.dynamic_impact_gwp = i, s
-        return i * self.dynamic_ratio, s
+        return i * self.dynamic_ratio * self.intensity_ratio, s
 
     def impact_pe(self) -> (float, int):
         i, s = super().impact_pe()
         self.dynamic_impact_pe = i, s
-        return i * self.dynamic_ratio, s
+        return i * self.dynamic_ratio * self.intensity_ratio, s
 
     def impact_adp(self) -> (float, int):
         i, s = super().impact_adp()
         self.dynamic_impact_adp = i, s
-        return i * self.dynamic_ratio, s
+        return i * self.dynamic_ratio * self.intensity_ratio, s
 
     def smart_complete_data(self):
         super().smart_complete_data()
         if self.dynamic_ratio is None:
             self.dynamic_ratio = self._DEFAULT_DYNAMIC_RATIO
+        if self.intensity_ratio is None:
+      	    self.intensity_ratio = self._DEFAULT_INTENSITY_RATIO
 
     def get_hours_electrical_consumption(self):
         return super().get_hours_electrical_consumption()
