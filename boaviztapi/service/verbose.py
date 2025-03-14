@@ -8,6 +8,7 @@ import copy
 def verbose_setup(complete_setup: MLSetup, input_setup: MLSetup):
     json_output = {}
     complete_setup = copy.deepcopy(complete_setup)
+    old_dynamic_ratio = complete_setup.usage.dynamic_ratio
     complete_setup.usage.dynamic_ratio = 1
     usage_gpus = copy.deepcopy(complete_setup.usage)
     usage_gpus.hours_electrical_consumption = complete_setup.gpu_usage * \
@@ -22,6 +23,7 @@ def verbose_setup(complete_setup: MLSetup, input_setup: MLSetup):
         sum(c.power_draw()[0]
             for c in complete_setup.server.config_components if c.TYPE == 'CPU') / 1000
     usage_cpu.dynamic_ratio = 1
+    complete_setup.usage.dynamic_ratio = old_dynamic_ratio
 
     for attr in ['nb_nodes', 'psf', 'cpu_usage', 'gpu_usage', 'average_usage', 'hardware_replacement_rate']:
         json_output[attr] = {}
